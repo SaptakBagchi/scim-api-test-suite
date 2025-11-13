@@ -1,0 +1,392 @@
+/**
+ * API Test Utilities and Configuration
+ * Handles authentication and API endpoint configuration
+ */
+
+/**
+ * API endpoint types supported by the project
+ */
+export type ApiEndpointType = 'scim' | 'apiserver';
+
+/**
+ * Project-level configuration from environment variables
+ */
+export const ProjectConfig = {
+  oauth: {
+    baseUrl: process.env.OAUTH_BASE_URL || 'https://rdv-010318.hylandqa.net/identityservice',
+    tokenEndpoint: process.env.OAUTH_TOKEN_ENDPOINT || '/connect/token',
+    clientId: process.env.CLIENT_ID || '',
+    clientSecret: process.env.CLIENT_SECRET || '',
+    defaultScope: process.env.DEFAULT_SCOPE || 'idpadmin',
+    defaultGrantType: process.env.DEFAULT_GRANT_TYPE || 'client_credentials'
+  },
+  api: {
+    baseUrl: process.env.API_BASE_URL || 'https://rdv-010318.hylandqa.net',
+    // Current endpoint type: 'scim' or 'apiserver'
+    endpointType: (process.env.API_ENDPOINT_TYPE as ApiEndpointType) || 'scim',
+    // Base paths for different endpoint types
+    endpoints: {
+      scim: process.env.API_SCIM_ENDPOINT || '/obscim/v2',
+      apiserver: process.env.API_APISERVER_ENDPOINT || '/ApiServer/onbase/SCIM/v2'
+    }
+  },
+  timeouts: {
+    api: parseInt(process.env.API_TIMEOUT || '30000'),
+    request: parseInt(process.env.REQUEST_TIMEOUT || '10000')
+  }
+};
+
+/**
+ * OAuth2 Token Response interface
+ */
+export interface OAuth2TokenResponse {
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
+}
+
+/**
+ * API Test Context interface - contains authentication and base configuration
+ */
+export interface ApiTestContext {
+  accessToken: string;
+  baseUrl: string;
+  headers: Record<string, string>;
+}
+
+/**
+ * Authentication utility - generates OAuth2 token for API tests
+ */
+export async function getAuthToken(request: any): Promise<OAuth2TokenResponse> {
+  console.log('🔐 Getting OAuth2 authentication token...');
+  
+  const formData = new URLSearchParams();
+  formData.append('grant_type', ProjectConfig.oauth.defaultGrantType);
+  formData.append('scope', ProjectConfig.oauth.defaultScope);
+  formData.append('client_id', ProjectConfig.oauth.clientId);
+  formData.append('client_secret', ProjectConfig.oauth.clientSecret);
+  
+  const tokenUrl = `${ProjectConfig.oauth.baseUrl}${ProjectConfig.oauth.tokenEndpoint}`;
+  console.log(`📍 Token URL: ${tokenUrl}`);
+  
+  const response = await request.post(tokenUrl, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json'
+    },
+    data: formData.toString(),
+    timeout: ProjectConfig.timeouts.request
+  });
+  
+  if (response.status() !== 200) {
+    const errorBody = await response.text();
+    throw new Error(`Authentication failed: ${response.status()} - ${errorBody}`);
+  }
+  
+  const tokenData = await response.json();
+  console.log(`✅ Token obtained successfully (expires in ${tokenData.expires_in} seconds)`);
+  
+  return tokenData;
+}
+
+/**
+ * Create API test context with authentication
+ */
+export async function createApiTestContext(request: any): Promise<ApiTestContext> {
+  // Validate endpoint configuration before proceeding
+  validateEndpointConfiguration();
+  
+  const tokenResponse = await getAuthToken(request);
+  
+  const context: ApiTestContext = {
+    accessToken: tokenResponse.access_token,
+    baseUrl: ProjectConfig.api.baseUrl,
+    headers: {
+      'Authorization': `Bearer ${tokenResponse.access_token}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'Playwright-SCIM-API-Tests/1.0'
+    }
+  };
+  
+  console.log(`🚀 API test context created for base URL: ${context.baseUrl}`);
+  logEndpointConfiguration();
+  return context;
+}
+
+/**
+ * Get the current active endpoint path based on configuration
+ */
+export function getCurrentEndpointPath(): string {
+  return ProjectConfig.api.endpoints[ProjectConfig.api.endpointType];
+}
+
+/**
+ * Get the current endpoint type being used
+ */
+export function getCurrentEndpointType(): ApiEndpointType {
+  return ProjectConfig.api.endpointType;
+}
+
+/**
+ * Utility function to log current endpoint configuration
+ */
+export function logEndpointConfiguration(): void {
+  console.log('🔧 API Endpoint Configuration:');
+  console.log(`📍 Current Type: ${getCurrentEndpointType().toUpperCase()}`);
+  console.log(`🌐 Base URL: ${ProjectConfig.api.baseUrl}`);
+  console.log(`📁 Endpoint Path: ${getCurrentEndpointPath()}`);
+  console.log(`✅ Full URL: ${ProjectConfig.api.baseUrl}${getCurrentEndpointPath()}`);
+}
+
+/**
+ * Utility function to validate endpoint configuration
+ */
+export function validateEndpointConfiguration(): void {
+  const currentType = ProjectConfig.api.endpointType;
+  const availableTypes: ApiEndpointType[] = ['scim', 'apiserver'];
+  
+  if (!availableTypes.includes(currentType)) {
+    throw new Error(`Invalid API_ENDPOINT_TYPE: ${currentType}. Must be one of: ${availableTypes.join(', ')}`);
+  }
+  
+  const currentPath = getCurrentEndpointPath();
+  if (!currentPath) {
+    throw new Error(`Endpoint path not configured for type: ${currentType}`);
+  }
+}
+
+/**
+ * API endpoint builders
+ */
+export const ApiEndpoints = {
+  // SCIM v2 endpoints (works for both scim and apiserver)
+  resourceTypes: () => `${getCurrentEndpointPath()}/ResourceTypes`,
+  users: () => `${getCurrentEndpointPath()}/Users`,
+  groups: () => `${getCurrentEndpointPath()}/Groups`,
+  schemas: () => `${getCurrentEndpointPath()}/Schemas`,
+  serviceProviderConfig: () => `${getCurrentEndpointPath()}/ServiceProviderConfig`,
+  
+  // SCIM v4.0.0 endpoints (alternative paths)
+  resourceTypesV4: () => `/ResourceTypes`,
+  schemasV4: () => `/Schemas`,
+  serviceProviderConfigV4: () => `/ServiceProviderConfig`,
+  
+  // Search endpoints
+  userSearch: () => `${getCurrentEndpointPath()}/Users/.search`,
+  groupSearch: () => `${getCurrentEndpointPath()}/Groups/.search`,
+  
+  // Health check endpoints (context-aware for SCIM vs API Server)
+  healthcheck: () => getCurrentEndpointType() === 'scim' ? `/obscim/healthcheck` : `/healthcheck`,
+  diagnostics: () => getCurrentEndpointType() === 'scim' ? `/obscim/diagnostics/details` : `/diagnostics/details`,
+  
+  // Custom endpoint builder
+  custom: (endpoint: string) => endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+};
+
+/**
+ * SCIM Schema Constants
+ */
+export const ScimSchemas = {
+  USER: 'urn:ietf:params:scim:schemas:core:2.0:User',
+  GROUP: 'urn:ietf:params:scim:schemas:core:2.0:Group',
+  LIST_RESPONSE: 'urn:ietf:params:scim:api:messages:2.0:ListResponse',
+  SEARCH_REQUEST: 'urn:ietf:params:scim:api:messages:2.0:SearchRequest',
+  PATCH_OP: 'urn:ietf:params:scim:api:messages:2.0:PatchOp',
+  ERROR: 'urn:ietf:params:scim:api:messages:2.0:Error',
+  SERVICE_PROVIDER_CONFIG: 'urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig',
+  SCHEMA: 'urn:ietf:params:scim:schemas:core:2.0:Schema',
+  RESOURCE_TYPE: 'urn:ietf:params:scim:schemas:core:2.0:ResourceType'
+} as const;
+
+/**
+ * Utility function to log API request details
+ */
+export function logApiRequest(method: string, endpoint: string, description?: string): void {
+  console.log(`🌐 ${method.toUpperCase()} Request: ${endpoint}`);
+  if (description) console.log(`📝 Description: ${description}`);
+}
+
+/**
+ * Response validation utilities
+ */
+export const ApiValidators = {
+  validateResponseStatus: (response: any, expectedStatus: number = 200) => {
+    if (response.status() !== expectedStatus) {
+      throw new Error(`Expected status ${expectedStatus}, got ${response.status()}`);
+    }
+    console.log(`✅ Response status validation passed (${response.status()})`);
+  },
+  
+  validateJsonResponse: async (response: any) => {
+    try {
+      const body = await response.json();
+      console.log('✅ Valid JSON response received');
+      return body;
+    } catch (error) {
+      throw new Error(`Invalid JSON response: ${error}`);
+    }
+  },
+  
+  validateScimResponse: (responseBody: any, resourceType?: string) => {
+    // Basic SCIM response validation
+    if (!responseBody.schemas || !Array.isArray(responseBody.schemas)) {
+      throw new Error('SCIM response missing schemas array');
+    }
+    
+    if (resourceType && responseBody.meta?.resourceType !== resourceType) {
+      throw new Error(`Expected resourceType ${resourceType}, got ${responseBody.meta?.resourceType}`);
+    }
+    
+    console.log('✅ SCIM response validation passed');
+  }
+};
+
+/**
+ * Test-level parameter interface for OAuth2 tests
+ */
+export interface OAuth2TestParams {
+  grant_type?: string;
+  scope?: string;
+  client_id?: string;
+  client_secret?: string;
+  additional_params?: Record<string, string>;
+  expected_status?: number;
+  test_description?: string;
+}
+
+/**
+ * Default test parameters - can be overridden at test level
+ */
+export const DefaultTestParams: OAuth2TestParams = {
+  grant_type: ProjectConfig.oauth.defaultGrantType,
+  scope: ProjectConfig.oauth.defaultScope,
+  client_id: ProjectConfig.oauth.clientId,
+  client_secret: ProjectConfig.oauth.clientSecret,
+  expected_status: 200
+};
+
+/**
+ * Test scenarios for parameterized testing
+ */
+export const TestScenarios = {
+  validCredentials: {
+    ...DefaultTestParams,
+    test_description: 'Valid client credentials flow'
+  },
+  
+  invalidSecret: {
+    ...DefaultTestParams,
+    client_secret: 'invalid_secret_12345',
+    expected_status: 400,
+    test_description: 'Invalid client secret'
+  },
+  
+  missingSecret: {
+    grant_type: DefaultTestParams.grant_type,
+    scope: DefaultTestParams.scope,
+    client_id: DefaultTestParams.client_id,
+    // client_secret intentionally missing
+    expected_status: 400,
+    test_description: 'Missing client secret'
+  },
+  
+  invalidGrantType: {
+    ...DefaultTestParams,
+    grant_type: 'invalid_grant_type',
+    expected_status: 400,
+    test_description: 'Invalid grant type'
+  },
+  
+  differentScope: {
+    ...DefaultTestParams,
+    scope: 'read write',
+    test_description: 'Different scope permissions'
+  },
+  
+  emptyScope: {
+    ...DefaultTestParams,
+    scope: '',
+    expected_status: 400,
+    test_description: 'Empty scope parameter'
+  }
+};
+
+/**
+ * Utility function to create OAuth2 request payload
+ */
+export function createOAuth2Payload(params: OAuth2TestParams): URLSearchParams {
+  const formData = new URLSearchParams();
+  
+  if (params.grant_type) formData.append('grant_type', params.grant_type);
+  if (params.scope) formData.append('scope', params.scope);
+  if (params.client_id) formData.append('client_id', params.client_id);
+  if (params.client_secret) formData.append('client_secret', params.client_secret);
+  
+  // Add any additional parameters
+  if (params.additional_params) {
+    Object.entries(params.additional_params).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+  }
+  
+  return formData;
+}
+
+/**
+ * Utility function to get full OAuth2 token URL
+ */
+export function getTokenUrl(): string {
+  return `${ProjectConfig.oauth.baseUrl}${ProjectConfig.oauth.tokenEndpoint}`;
+}
+
+/**
+ * Utility function to log test parameters (with sensitive data hidden)
+ */
+export function logTestParams(params: OAuth2TestParams): void {
+  console.log('📝 Test parameters:');
+  console.log(`  - Description: ${params.test_description || 'No description'}`);
+  console.log(`  - Grant Type: ${params.grant_type || 'Not specified'}`);
+  console.log(`  - Scope: ${params.scope || 'Not specified'}`);
+  console.log(`  - Client ID: ${params.client_id || 'Not specified'}`);
+  console.log(`  - Client Secret: ${params.client_secret ? '[SET]' : '[NOT SET]'}`);
+  console.log(`  - Expected Status: ${params.expected_status || 'Not specified'}`);
+  
+  if (params.additional_params && Object.keys(params.additional_params).length > 0) {
+    console.log(`  - Additional Params: ${Object.keys(params.additional_params).join(', ')}`);
+  }
+}
+
+/**
+ * Response validation utilities
+ */
+export const ResponseValidators = {
+  validateSuccessResponse: (responseBody: any) => {
+    const requiredFields = ['access_token', 'expires_in', 'token_type', 'scope'];
+    const missingFields = requiredFields.filter(field => !(field in responseBody));
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields in response: ${missingFields.join(', ')}`);
+    }
+    
+    // Validate token structure (JWT should have 3 parts)
+    if (responseBody.access_token) {
+      const tokenParts = responseBody.access_token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error('Access token does not appear to be a valid JWT structure');
+      }
+    }
+    
+    // Validate expires_in is reasonable
+    if (responseBody.expires_in && (responseBody.expires_in <= 0 || responseBody.expires_in > 86400)) {
+      throw new Error(`Token expiration time is unreasonable: ${responseBody.expires_in} seconds`);
+    }
+  },
+  
+  validateErrorResponse: (responseBody: any) => {
+    if (!responseBody.error) {
+      throw new Error('Expected error field in error response');
+    }
+  }
+};

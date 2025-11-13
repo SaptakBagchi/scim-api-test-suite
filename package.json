@@ -1,0 +1,30 @@
+{
+  "name": "scim-api-test-suite",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for SCIM (System for Cross-domain Identity Management) API endpoints including Users, Groups, Schemas, and Service Provider Configuration",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test scim-api.spec.ts",
+    "test:auth": "playwright test --project=auth-tests",
+    "test:dev": "ENV_FILE=.env.development playwright test scim-api.spec.ts",
+    "test:staging": "ENV_FILE=.env.staging playwright test scim-api.spec.ts", 
+    "test:prod": "ENV_FILE=.env.production playwright test scim-api.spec.ts",
+    "test:headed": "playwright test scim-api.spec.ts --headed",
+    "test:debug": "playwright test scim-api.spec.ts --debug",
+    "test:resource-types": "playwright test scim-api.spec.ts -g \"Get Resource Types\"",
+    "test:get-user": "playwright test scim-api.spec.ts -g \"Get User with ID\"",
+    "report": "playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.1"
+  },
+  "dependencies": {
+    "@playwright/mcp": "^0.0.45",
+    "dotenv": "^17.2.3"
+  }
+}
