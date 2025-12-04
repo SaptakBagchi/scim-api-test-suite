@@ -66,7 +66,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ GET /obscim/v2/ResourceTypes`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -156,7 +156,7 @@ test.describe('SCIM API Tests', () => {
     ApiValidators.validateResponseTime(startTime, 2000, 'GET User by ID');
     
     // Validate response status
-    await test.step(`✅ GET /obscim/v2/Users/${userId}`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -278,7 +278,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ GET /obscim/v2/Users`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -365,7 +365,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ GET /obscim/v2/Users?startIndex=${startIndex}&count=${count}`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -444,7 +444,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ GET /obscim/v2/Users?filter=${filterValue}`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -551,7 +551,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status (201 Created)
-    await test.step(`✅ POST /obscim/v2/Users`, async () => {
+    await test.step(`✅ POST ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 201);
     });
     
@@ -652,7 +652,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ POST /obscim/v2/Users/.search`, async () => {
+    await test.step(`✅ POST ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -750,7 +750,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ POST /obscim/v2/Users/.search`, async () => {
+    await test.step(`✅ POST ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -843,7 +843,7 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`✅ POST /obscim/v2/Users/.search`, async () => {
+    await test.step(`✅ POST ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -1021,7 +1021,7 @@ test.describe('SCIM API Tests', () => {
     }
     
     // Validate successful response status (200 OK)
-    await test.step(`✅ PUT /obscim/v2/Users/${userId}`, async () => {
+    await test.step(`✅ PUT ${updateEndpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -1148,7 +1148,7 @@ test.describe('SCIM API Tests', () => {
     
     // Handle successful PATCH response
     if (response.status() === 200) {
-      await test.step(`✅ PATCH /obscim/v2/Users/${userId}`, async () => {
+      await test.step(`✅ PATCH ${patchEndpoint}`, async () => {
         console.log('✅ PATCH operation successful - implementation supports PATCH despite documentation');
       });
       
@@ -1198,7 +1198,7 @@ test.describe('SCIM API Tests', () => {
     
     // Handle request format issues
     if (response.status() === 400) {
-      await test.step(`✅ PATCH /obscim/v2/Users/${userId}`, async () => {
+      await test.step(`✅ PATCH ${patchEndpoint}`, async () => {
         console.log(`✅ PATCH operation properly rejected due to request format (Status: ${response.status()})`);
         const errorBody = await response.text();
         console.log(`📄 Error details: ${errorBody}`);
@@ -1362,7 +1362,7 @@ test.describe('SCIM API Tests', () => {
 
     // Expected response is 204 No Content for successful deletion
     if (response.status() === 204) {
-      await test.step(`✅ DELETE /obscim/v2/Users/${userIdToDelete}`, async () => {
+      await test.step(`✅ DELETE ${endpoint}`, async () => {
         console.log('✅ DELETE operation successful (204 No Content)');
         console.log(`✅ User ${userIdToDelete} deleted successfully`);
       });
@@ -1372,7 +1372,7 @@ test.describe('SCIM API Tests', () => {
 
     // Handle error responses
     if (response.status() === 404) {
-      await test.step(`✅ DELETE /obscim/v2/Users/${userIdToDelete}`, async () => {
+      await test.step(`✅ DELETE ${endpoint}`, async () => {
         console.log('⚠️  User not found (Status: 404)');
         console.log('🔍 User may have already been deleted or does not exist');
         console.log('✅ Test completed - DELETE operation availability verified');
@@ -1382,7 +1382,7 @@ test.describe('SCIM API Tests', () => {
     }
 
     if (response.status() === 405) {
-      await test.step(`✅ DELETE /obscim/v2/Users/${userIdToDelete}`, async () => {
+      await test.step(`✅ DELETE ${endpoint}`, async () => {
         console.log('⚠️  DELETE operation not allowed by this SCIM implementation (Status: 405)');
         console.log('🔍 This is expected behavior for some SCIM servers that do not support DELETE');
         console.log('✅ Test completed - DELETE operation availability verified');
@@ -1414,7 +1414,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`✅ GET /obscim/v2/Groups`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -1470,7 +1470,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`✅ GET /obscim/v2/Groups/${groupId}`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
       
       const responseBody = await ApiValidators.validateJsonResponse(response);
@@ -1523,7 +1523,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`✅ GET /obscim/v2/Groups?startIndex=${startIndex}&count=${count}`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
       
       const responseBody = await ApiValidators.validateJsonResponse(response);
@@ -1569,7 +1569,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`✅ GET /obscim/v2/Groups?excludedAttributes=members`, async () => {
+    await test.step(`✅ GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
       
       const responseBody = await ApiValidators.validateJsonResponse(response);
@@ -1628,7 +1628,7 @@ test.describe('SCIM API Tests', () => {
       data: groupData
     });
     
-    await test.step(`✅ POST /obscim/v2/Groups`, async () => {
+    await test.step(`✅ POST ${endpoint}`, async () => {
       // STEP 2: Validate status code
       console.log('✅ STEP 2: Validating response status...');
       ApiValidators.validateResponseStatus(response, 201);
@@ -1748,7 +1748,7 @@ test.describe('SCIM API Tests', () => {
 
     // PUT is NOT supported for Groups according to documentation (Currently Used By Hyland IdP: No)
     // We expect 405 Method Not Allowed or 500/501 for unsupported operations
-    await test.step(`✅ PUT /obscim/v2/Groups/${createdGroup.id}`, async () => {
+    await test.step(`✅ PUT ${endpoint}`, async () => {
       if (response.status() === 405 || response.status() === 500 || response.status() === 501) {
         console.log(`✅ PUT operation correctly not supported for Groups (Status: ${response.status()})`);
         console.log('🔍 This aligns with documentation - PUT for Groups is not currently used by Hyland IdP');
@@ -1824,7 +1824,7 @@ test.describe('SCIM API Tests', () => {
       data: patchData
     });
 
-    await test.step(`✅ PATCH /obscim/v2/Groups/${existingGroupId}`, async () => {
+    await test.step(`✅ PATCH ${endpoint}`, async () => {
       // Handle successful response - PATCH is supported according to ServiceProviderConfig
       if (response.status() === 200 || response.status() === 204) {
       console.log(`✅ STEP 3: PATCH operation successful (Status: ${response.status()})`);
@@ -1935,7 +1935,7 @@ test.describe('SCIM API Tests', () => {
     // According to documentation, DELETE Groups returns 405 Method Not Allowed
     // This is the expected behavior (Currently Used By Hyland IdP: No)
     if (response.status() === 405) {
-      await test.step(`✅ DELETE /obscim/v2/Groups/${createdGroup.id}`, async () => {
+      await test.step(`✅ DELETE ${endpoint}`, async () => {
         console.log('✅ DELETE operation correctly returns 405 Method Not Allowed');
         console.log('🔍 This matches the documented behavior - Groups DELETE returns 405 Method Not Allowed');
         console.log('✅ Test completed - DELETE operation behaves as documented');
@@ -2011,7 +2011,7 @@ test.describe('ServiceProviderConfig API Tests', () => {
     console.log(`ServiceProviderConfig Response Status: ${response.status()}`);
     console.log(`ServiceProviderConfig Response Headers:`, response.headers());
 
-    await test.step(`✅ GET /obscim/v2/ServiceProviderConfig`, async () => {
+    await test.step(`✅ GET ${ApiEndpoints.serviceProviderConfig()}`, async () => {
       if (response.status() === 200) {
         const responseBody = await response.json();
         console.log(`ServiceProviderConfig Response Body:`, JSON.stringify(responseBody, null, 2));
@@ -2106,7 +2106,7 @@ test.describe('Schemas API Tests', () => {
     console.log(`Schemas Response Status: ${response.status()}`);
     console.log(`Schemas Response Headers:`, response.headers());
 
-    await test.step(`✅ GET /obscim/v2/Schemas`, async () => {
+    await test.step(`✅ GET ${ApiEndpoints.schemas()}`, async () => {
       if (response.status() === 200) {
         const responseBody = await response.json();
         console.log(`Schemas Response Body:`, JSON.stringify(responseBody, null, 2));
@@ -2219,7 +2219,7 @@ test.describe('ResourceTypes API Tests', () => {
     console.log(`ResourceTypes Response Status: ${response.status()}`);
     console.log(`ResourceTypes Response Headers:`, response.headers());
 
-    await test.step(`✅ GET /obscim/v2/ResourceTypes`, async () => {
+    await test.step(`✅ GET ${ApiEndpoints.resourceTypes()}`, async () => {
       if (response.status() === 200) {
         const responseBody = await response.json();
         console.log(`ResourceTypes Response Body:`, JSON.stringify(responseBody, null, 2));
@@ -2359,7 +2359,7 @@ test.describe('Health Check API Tests', () => {
     const endpointType = getCurrentEndpointType();
     console.log(`🔧 Testing with endpoint type: ${endpointType}`);
 
-    await test.step(`✅ GET /obscim/healthcheck`, async () => {
+    await test.step(`✅ GET ${ApiEndpoints.healthcheck()}`, async () => {
       if (response.status() === 200) {
         const responseBody = await response.text();
         console.log(`Health Check Response Body: ${responseBody}`);
@@ -2398,7 +2398,7 @@ test.describe('Health Check API Tests', () => {
     const endpointType = getCurrentEndpointType();
     console.log(`🔧 Testing with endpoint type: ${endpointType}`);
 
-    await test.step(`✅ GET /obscim/diagnostics/details`, async () => {
+    await test.step(`✅ GET ${diagnosticsUrl}`, async () => {
       if (response.status() === 200) {
         try {
           const responseBody = await response.json();
