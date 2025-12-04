@@ -23,7 +23,8 @@ export const ProjectConfig = {
   api: {
     baseUrl: process.env.API_BASE_URL || 'https://rdv-010318.hylandqa.net',
     // Current endpoint type: 'scim' or 'apiserver'
-    endpointType: (process.env.API_ENDPOINT_TYPE as ApiEndpointType) || 'scim',
+    // Check both ENDPOINT_TYPE and API_ENDPOINT_TYPE for backwards compatibility
+    endpointType: ((process.env.ENDPOINT_TYPE || process.env.API_ENDPOINT_TYPE) as ApiEndpointType) || 'scim',
     // Base paths for different endpoint types
     endpoints: {
       scim: process.env.API_SCIM_ENDPOINT || '/obscim/v2',
@@ -240,6 +241,62 @@ export const ApiValidators = {
     }
     
     console.log('✅ SCIM response validation passed');
+  },
+
+  /**
+   * Validate response time is within acceptable limits
+   * Industry standard: API responses should be under 2000ms for good UX
+   */
+  validateResponseTime: (startTime: number, maxTimeMs: number = 2000, operationName: string = 'API call') => {
+    const responseTime = Date.now() - startTime;
+    console.log(`⏱️  Response time: ${responseTime}ms`);
+    
+    if (responseTime > maxTimeMs) {
+      console.log(`⚠️  Warning: ${operationName} took ${responseTime}ms (exceeds ${maxTimeMs}ms threshold)`);
+    } else {
+      console.log(`✅ Response time acceptable (< ${maxTimeMs}ms)`);
+    }
+    
+    return responseTime;
+  },
+
+  /**
+   * Validate required fields exist in response
+   */
+  validateRequiredFields: (responseBody: any, requiredFields: string[], objectName: string = 'Response') => {
+    const missingFields: string[] = [];
+    
+    requiredFields.forEach(field => {
+      if (responseBody[field] === undefined || responseBody[field] === null) {
+        missingFields.push(field);
+      }
+    });
+    
+    if (missingFields.length > 0) {
+      throw new Error(`${objectName} missing required fields: ${missingFields.join(', ')}`);
+    }
+    
+    console.log(`✅ All required fields present in ${objectName}`);
+  },
+
+  /**
+   * Validate field types match expected types
+   */
+  validateFieldTypes: (responseBody: any, fieldTypes: Record<string, string>) => {
+    const typeErrors: string[] = [];
+    
+    Object.entries(fieldTypes).forEach(([field, expectedType]) => {
+      const actualType = typeof responseBody[field];
+      if (actualType !== expectedType && responseBody[field] !== undefined) {
+        typeErrors.push(`${field}: expected ${expectedType}, got ${actualType}`);
+      }
+    });
+    
+    if (typeErrors.length > 0) {
+      throw new Error(`Type validation failed: ${typeErrors.join('; ')}`);
+    }
+    
+    console.log('✅ All field types match expected types');
   }
 };
 

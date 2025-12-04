@@ -8,7 +8,7 @@
     "test:api": "playwright test scim-api.spec.ts",
     "test:auth": "playwright test --project=auth-tests",
     "test:dev": "ENV_FILE=.env.development playwright test scim-api.spec.ts",
-    "test:staging": "ENV_FILE=.env.staging playwright test scim-api.spec.ts", 
+    "test:staging": "ENV_FILE=.env.staging playwright test scim-api.spec.ts",
     "test:prod": "ENV_FILE=.env.production playwright test scim-api.spec.ts",
     "test:headed": "playwright test scim-api.spec.ts --headed",
     "test:debug": "playwright test scim-api.spec.ts --debug",
@@ -21,7 +21,9 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "@types/node": "^24.10.1"
+    "@types/mssql": "^9.1.8",
+    "@types/node": "^24.10.1",
+    "mssql": "^12.1.0"
   },
   "dependencies": {
     "@playwright/mcp": "^0.0.45",
