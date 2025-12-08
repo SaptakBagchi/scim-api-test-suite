@@ -10,30 +10,55 @@ export type ApiEndpointType = 'scim' | 'apiserver';
 
 /**
  * Project-level configuration from environment variables
+ * Using getters to ensure dynamic reads from process.env (for OEM switching)
  */
 export const ProjectConfig = {
   oauth: {
-    baseUrl: process.env.OAUTH_BASE_URL || 'https://rdv-010318.hylandqa.net/identityservice',
-    tokenEndpoint: process.env.OAUTH_TOKEN_ENDPOINT || '/connect/token',
-    clientId: process.env.CLIENT_ID || '',
-    clientSecret: process.env.CLIENT_SECRET || '',
-    defaultScope: process.env.DEFAULT_SCOPE || 'idpadmin',
-    defaultGrantType: process.env.DEFAULT_GRANT_TYPE || 'client_credentials'
+    get baseUrl() {
+      return process.env.OAUTH_BASE_URL || 'https://rdv-010318.hylandqa.net/identityservice';
+    },
+    get tokenEndpoint() {
+      return process.env.OAUTH_TOKEN_ENDPOINT || '/connect/token';
+    },
+    get clientId() {
+      return process.env.CLIENT_ID || '';
+    },
+    get clientSecret() {
+      return process.env.CLIENT_SECRET || '';
+    },
+    get defaultScope() {
+      return process.env.DEFAULT_SCOPE || 'idpadmin';
+    },
+    get defaultGrantType() {
+      return process.env.DEFAULT_GRANT_TYPE || 'client_credentials';
+    }
   },
   api: {
-    baseUrl: process.env.API_BASE_URL || 'https://rdv-010318.hylandqa.net',
+    get baseUrl() {
+      return process.env.API_BASE_URL || 'https://rdv-010318.hylandqa.net';
+    },
     // Current endpoint type: 'scim' or 'apiserver'
     // Check both ENDPOINT_TYPE and API_ENDPOINT_TYPE for backwards compatibility
-    endpointType: ((process.env.ENDPOINT_TYPE || process.env.API_ENDPOINT_TYPE) as ApiEndpointType) || 'scim',
+    get endpointType(): ApiEndpointType {
+      return ((process.env.ENDPOINT_TYPE || process.env.API_ENDPOINT_TYPE) as ApiEndpointType) || 'scim';
+    },
     // Base paths for different endpoint types
     endpoints: {
-      scim: process.env.API_SCIM_ENDPOINT || '/obscim/v2',
-      apiserver: process.env.API_APISERVER_ENDPOINT || '/ApiServer/onbase/SCIM/v2'
+      get scim() {
+        return process.env.API_SCIM_ENDPOINT || '/obscim/v2';
+      },
+      get apiserver() {
+        return process.env.API_APISERVER_ENDPOINT || '/ApiServer/onbase/SCIM/v2';
+      }
     }
   },
   timeouts: {
-    api: parseInt(process.env.API_TIMEOUT || '30000'),
-    request: parseInt(process.env.REQUEST_TIMEOUT || '10000')
+    get api() {
+      return parseInt(process.env.API_TIMEOUT || '30000');
+    },
+    get request() {
+      return parseInt(process.env.REQUEST_TIMEOUT || '10000');
+    }
   }
 };
 

@@ -18,7 +18,7 @@ This test suite supports OEM and Non-OEM environments with automatic database an
 - API URL: `https://rdv-009275.hylandqa.net`
 - OAuth URL: `https://rdv-009275.hylandqa.net/identityservice`
 - Database Server: `RDV-009275\QASQL17LOCAL`
-- Database: `LocalOBTesting`
+- Database: `LocalOBTestingTwo`
 - User: `hsi`
 - Password: `wstinol`
 
