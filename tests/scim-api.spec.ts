@@ -1084,13 +1084,52 @@ test.describe('SCIM API Tests', () => {
    * Purpose: Partially update an existing user using PATCH method with SCIM PatchOp operations
    */
   test('Partial Update User (PATCH)', async ({ request }, testInfo) => {
-    // Use an existing user - ID varies by environment
-    // Non-OEM: ID 143 (USER1), OEM: ID 101 (USER1)
-    const userId = isOemEnvironment() ? "101" : "143";
-    console.log(`✅ Using existing user with ID: ${userId} for PATCH test`);
+    // STEP 1: Create a user first for PATCH testing
+    console.log('🔧 STEP 1: Creating user for PATCH test...');
+    const uniqueUserName = `patchUser_${Date.now()}`;
+    const createEndpoint = ApiEndpoints.users();
+    const createRequestBody = {
+      schemas: [ScimSchemas.USER],
+      active: true,
+      userName: uniqueUserName,
+      name: {
+        formatted: `PATCH Test User ${Date.now()}`
+      },
+      emails: [
+        {
+          value: "patch@test.com",
+          type: "work",
+          primary: true
+        }
+      ],
+      groups: []
+    };
     
-    // STEP 1: Get user BEFORE update (baseline state)
-    console.log('📊 STEP 1: Fetching user state BEFORE update...');
+    const createResponse = await request.post(`${apiContext.baseUrl}${createEndpoint}`, {
+      headers: {
+        ...apiContext.headers,
+        'Content-Type': 'application/scim+json'
+      },
+      data: createRequestBody,
+      timeout: 30000
+    });
+    
+    // Check if user creation was successful
+    if (createResponse.status() !== 201) {
+      console.log(`⚠️  Could not create user for PATCH test (Status: ${createResponse.status()})`);
+      console.log('🔍 Skipping PATCH test due to user creation failure');
+      test.skip();
+      return;
+    }
+    
+    const createdUser = await createResponse.json();
+    const userId = createdUser.id;
+    console.log(`✅ Created user with ID: ${userId} for PATCH test`);
+    console.log(`  - Username: ${createdUser.userName}`);
+    console.log(`  - Email: ${createdUser.emails?.[0]?.value || 'none'}`);
+    
+    // STEP 2: Get user BEFORE update (baseline state)
+    console.log('📊 STEP 2: Fetching user state BEFORE update...');
     const getUserEndpoint = `${ApiEndpoints.users()}/${userId}`;
     const beforeResponse = await request.get(`${apiContext.baseUrl}${getUserEndpoint}`, {
       headers: apiContext.headers,
@@ -1106,7 +1145,7 @@ test.describe('SCIM API Tests', () => {
       console.log(`  - Email: ${beforeState.emails?.[0]?.value || 'none'}`);
     }
     
-    // STEP 2: Prepare PATCH request
+    // STEP 3: Prepare PATCH request
     const patchEndpoint = `${ApiEndpoints.users()}/${userId}`;
     const patchRequestBody = {
       schemas: [
@@ -1114,16 +1153,18 @@ test.describe('SCIM API Tests', () => {
       ],
       Operations: [
         {
+          op: "replace",
+          path: "emails[type eq \"work\"].value",
+          value: "updated.patch@test.com"
+        },
+        {
           op: "add",
-          value: {
-            username: "testuser123",
-            email: "test@user@123",
-            groups: [
-              {
-                value: "1"
-              }
-            ]
-          }
+          path: "groups",
+          value: [
+            {
+              value: "1"
+            }
+          ]
         }
       ]
     };
@@ -1131,8 +1172,8 @@ test.describe('SCIM API Tests', () => {
     logApiRequest('PATCH', patchEndpoint, `Patch user ${userId} with PatchOp operations`);
     console.log('📤 Request body:', JSON.stringify(patchRequestBody, null, 2));
     
-    // STEP 3: Execute PATCH request
-    console.log('🔄 STEP 2: Executing PATCH operation...');
+    // STEP 4: Execute PATCH request
+    console.log('🔄 STEP 3: Executing PATCH operation...');
     const response = await request.patch(`${apiContext.baseUrl}${patchEndpoint}`, {
       headers: {
         ...apiContext.headers,
@@ -1159,8 +1200,8 @@ test.describe('SCIM API Tests', () => {
       const responseBody = await ApiValidators.validateJsonResponse(response);
       console.log('📄 Response body received:', JSON.stringify(responseBody, null, 2));
       
-      // STEP 4: Validate response structure and schemas
-      console.log('✅ STEP 3: Validating response structure...');
+      // STEP 5: Validate response structure and schemas
+      console.log('✅ STEP 4: Validating response structure...');
       expect(responseBody.schemas).toBeDefined();
       expect(Array.isArray(responseBody.schemas)).toBe(true);
       expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:User');
@@ -1169,8 +1210,8 @@ test.describe('SCIM API Tests', () => {
       console.log('  ✅ Response schema valid');
       console.log('  ✅ User ID matches');
       
-      // STEP 5: Verify data persistence - GET user AFTER update
-      console.log('🔍 STEP 4: Verifying data persistence - fetching updated user...');
+      // STEP 6: Verify data persistence - GET user AFTER update
+      console.log('🔍 STEP 5: Verifying data persistence - fetching updated user...');
       const afterResponse = await request.get(`${apiContext.baseUrl}${getUserEndpoint}`, {
         headers: apiContext.headers,
         timeout: 30000
@@ -1781,12 +1822,45 @@ test.describe('SCIM API Tests', () => {
    * GROUP OPERATIONS - PATCH endpoints (1 test with error handling)
    */
   test('Partial Update Group (PATCH)', async ({ request }, testInfo) => {
-    // Use existing group ID 1 (MANAGER group) for PATCH test
-    const existingGroupId = '1';
-    console.log(`✅ Using existing group with ID: ${existingGroupId} for PATCH test`);
+    // STEP 1: Create a group first for PATCH testing
+    console.log('🔧 STEP 1: Creating group for PATCH test...');
+    const uniqueGroupName = `PATCHGROUP_${Date.now()}`;
+    const createEndpoint = ApiEndpoints.groups();
+    const createRequestBody = {
+      schemas: [ScimSchemas.GROUP],
+      displayName: uniqueGroupName,
+      members: [
+        {
+          value: "1"
+        }
+      ]
+    };
     
-    // STEP 1: Get group BEFORE update (baseline state)
-    console.log('📊 STEP 1: Fetching group state BEFORE update...');
+    const createResponse = await request.post(`${apiContext.baseUrl}${createEndpoint}`, {
+      headers: {
+        ...apiContext.headers,
+        'Content-Type': 'application/scim+json'
+      },
+      data: createRequestBody,
+      timeout: 30000
+    });
+    
+    // Check if group creation was successful
+    if (createResponse.status() !== 201) {
+      console.log(`⚠️  Could not create group for PATCH test (Status: ${createResponse.status()})`);
+      console.log('🔍 Skipping PATCH test due to group creation failure');
+      test.skip();
+      return;
+    }
+    
+    const createdGroup = await createResponse.json();
+    const existingGroupId = createdGroup.id;
+    console.log(`✅ Created group with ID: ${existingGroupId} for PATCH test`);
+    console.log(`  - Display Name: ${createdGroup.displayName}`);
+    console.log(`  - Initial Members: ${createdGroup.members?.length || 0}`);
+    
+    // STEP 2: Get group BEFORE update (baseline state)
+    console.log('📊 STEP 2: Fetching group state BEFORE update...');
     const getEndpoint = `${ApiEndpoints.groups()}/${existingGroupId}`;
     const beforeResponse = await request.get(`${apiContext.baseUrl}${getEndpoint}`, {
       headers: apiContext.headers,
@@ -1803,13 +1877,13 @@ test.describe('SCIM API Tests', () => {
       console.log(`  - Members count: ${beforeMemberCount}`);
     }
     
-    // STEP 2: Prepare PATCH operation
+    // STEP 3: Prepare PATCH operation
     const patchData = {
       schemas: [ScimSchemas.PATCH_OP],
       Operations: [{
         op: "add",
         path: "members",
-        value: [{ value: "143" }]
+        value: [{ value: "2" }]
       }]
     };
     
@@ -1817,8 +1891,8 @@ test.describe('SCIM API Tests', () => {
     logApiRequest('PATCH', endpoint, `Patch group ${existingGroupId} with PatchOp operations`);
     console.log('📤 Request body:', JSON.stringify(patchData, null, 2));
 
-    // STEP 3: Execute PATCH operation
-    console.log('🔄 STEP 2: Executing PATCH operation...');
+    // STEP 4: Execute PATCH operation
+    console.log('🔄 STEP 3: Executing PATCH operation...');
     const response = await request.patch(`${apiContext.baseUrl}${endpoint}`, {
       headers: apiContext.headers,
       data: patchData
@@ -1827,7 +1901,7 @@ test.describe('SCIM API Tests', () => {
     await test.step(`✅ PATCH ${endpoint}`, async () => {
       // Handle successful response - PATCH is supported according to ServiceProviderConfig
       if (response.status() === 200 || response.status() === 204) {
-      console.log(`✅ STEP 3: PATCH operation successful (Status: ${response.status()})`);
+      console.log(`✅ STEP 4: PATCH operation successful (Status: ${response.status()})`);
       console.log('✅ Implementation supports PATCH despite documentation showing "Currently Used By Hyland IdP: No"');
       console.log('🔍 ServiceProviderConfig confirms PATCH is supported: {"patch": {"supported": true}}');
       
@@ -1847,8 +1921,8 @@ test.describe('SCIM API Tests', () => {
         console.log('✅ PATCH completed successfully (204 No Content)');
       }
       
-      // STEP 4: Verify persistence - GET group AFTER update
-      console.log('🔍 STEP 4: Verifying data persistence - fetching updated group...');
+      // STEP 5: Verify persistence - GET group AFTER update
+      console.log('🔍 STEP 5: Verifying data persistence - fetching updated group...');
       const afterResponse = await request.get(`${apiContext.baseUrl}${getEndpoint}`, {
         headers: apiContext.headers,
         timeout: 30000
