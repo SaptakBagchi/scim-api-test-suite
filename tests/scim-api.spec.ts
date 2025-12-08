@@ -1830,9 +1830,8 @@ test.describe('SCIM API Tests', () => {
       schemas: [ScimSchemas.GROUP],
       displayName: uniqueGroupName,
       members: [
-        {
-          value: "1"
-        }
+        { value: "5" },
+        { value: "6" }
       ]
     };
     
@@ -1848,6 +1847,12 @@ test.describe('SCIM API Tests', () => {
     // Check if group creation was successful
     if (createResponse.status() !== 201) {
       console.log(`⚠️  Could not create group for PATCH test (Status: ${createResponse.status()})`);
+      try {
+        const errorBody = await createResponse.json();
+        console.log('📄 Error response body:', JSON.stringify(errorBody, null, 2));
+      } catch (e) {
+        console.log('⚠️  Could not parse error response body');
+      }
       console.log('🔍 Skipping PATCH test due to group creation failure');
       test.skip();
       return;
@@ -1883,7 +1888,7 @@ test.describe('SCIM API Tests', () => {
       Operations: [{
         op: "add",
         path: "members",
-        value: [{ value: "2" }]
+        value: [{ value: "6" }, { value: "7" }]
       }]
     };
     
