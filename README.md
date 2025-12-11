@@ -1,68 +1,74 @@
-# SCIM API Test Suite
+# SCIM API Test Framework
 
-A comprehensive test automation framework for SCIM (System for Cross-domain Identity Management) API endpoints using Playwright and TypeScript.
+A production-ready test automation framework for SCIM (System for Cross-domain Identity Management) 2.0 APIs using Playwright and TypeScript.
 
 ## 🎯 Overview
 
-This test suite provides complete coverage for SCIM v2 API operations including Users, Groups, Schemas, Service Provider Configuration, Resource Types, and Health Check endpoints. Built with enterprise-grade practices for reliability and maintainability.
+This framework provides a clean, reusable structure for SCIM API testing with utilities for authentication, validation, environment management, and database operations. Built with enterprise best practices for maintainability and extensibility.
 
-## 🚀 Features
+## � Branch Structure
 
-- ✅ **Comprehensive Coverage**: 28+ tests covering all SCIM API endpoints
-- ✅ **Multi-Environment Support**: Development, Staging, and Production configurations
-- ✅ **Type-Safe**: Full TypeScript support with proper interfaces
+- **`main`** - Clean framework only (utilities, configs, documentation) ⭐ You are here
+- **`develop`** - Full test suite with 28+ tests (active development branch)
+- **`poc`** - Showcase with 5-6 selected tests for demonstration
+
+## 🚀 Key Features
+
+- ✅ **Clean Architecture**: Reusable utilities and clear separation of concerns
+- ✅ **Multi-Environment**: Support for Development, Staging, Production
+- ✅ **OEM/Non-OEM**: Automatic handling of environment differences
 - ✅ **OAuth2 Authentication**: Automated token management
-- ✅ **Rich Reporting**: HTML reports with detailed test steps
-- ✅ **Error Handling**: Production-ready error scenarios
-- ✅ **Parallel Execution**: Optimized test performance
+- ✅ **Endpoint Flexibility**: Switch between SCIM and API Server endpoints
+- ✅ **Database Integration**: Optional SQL Server integration for test data
+- ✅ **Rich Validation**: Pre-built validators for common SCIM patterns
+- ✅ **Type-Safe**: Full TypeScript support
 
-## 📁 Project Structure
+## 📁 Framework Structure
 
 ```
-scim-api-test-suite/
-├── .env                          # Environment configuration
-├── .env.development             # Development environment
-├── .env.staging                 # Staging environment  
-├── .env.production             # Production environment
+scim-api-test-suite/  (main branch)
+├── utils/
+│   ├── api-config.ts           # API utilities, auth, validation
+│   └── db-config.ts            # Database operations (optional)
+├── tests/
+│   └── example.spec.ts         # Example test template
+├── scripts/
+│   ├── switch-endpoint.ps1     # Endpoint switching script
+│   └── test-with-endpoint.ps1  # Test runner with endpoint
 ├── global-setup.ts             # Global test setup
 ├── playwright.config.ts        # Playwright configuration
-├── utils/
-│   └── api-config.ts           # Authentication & API utilities
-├── tests/
-│   └── scim-api.spec.ts        # Main SCIM API test suite
-├── TestContext/                # Test context and data management
-├── scripts/                    # Utility scripts
-└── docs/
-    ├── SCIM-API-TESTING-GUIDE.md
-    ├── PARAMETERIZATION-GUIDE.md
-    ├── ENDPOINT_SWITCHING.md
-    └── TEST_SUMMARY.md
+├── .env files                  # Environment configurations
+├── FRAMEWORK.md                # Detailed framework documentation
+└── Documentation files
 ```
 
-## 🔧 Test Coverage
+## 🔧 Framework Components
 
-### **User Operations (15+ Tests)**
-- Get All Users (with pagination, filtering)
-- Get User by ID
-- Create User
-- Update User (PUT)
-- Partial Update User (PATCH)  
-- Delete User
-- Search Users with POST
+### **Authentication & API Utilities** (`utils/api-config.ts`)
+- OAuth2 token management
+- Request/response validation
+- Endpoint configuration (SCIM/API Server)
+- Environment detection (OEM/Non-OEM)
+- Pre-built validators
 
-### **Group Operations (7+ Tests)**
-- Get All Groups
-- Get Group by ID
-- Create Group
-- Update Group (PUT/PATCH)
-- Delete Group
+### **Database Utilities** (`utils/db-config.ts`)
+- SQL Server connection pooling
+- User CRUD operations
+- Test data management
+- Environment-specific configurations
 
-### **Schema & Configuration (6+ Tests)**
-- Service Provider Configuration
-- SCIM Schemas validation
-- Resource Types discovery
-- Health Check endpoints
-- Diagnostics
+### **Validation Utilities**
+- Response status validation
+- JSON schema validation
+- Required fields validation
+- Field type validation
+- Response time validation
+
+### **Logging & Debugging**
+- Structured console output
+- Clean ASCII prefixes (Windows PowerShell compatible)
+- Request/response logging
+- Test step tracking
 
 ## 🚀 Quick Start
 
@@ -72,44 +78,51 @@ scim-api-test-suite/
 
 ### Installation
 ```bash
-# Clone and setup
+# Clone the framework
 git clone <repository-url>
 cd scim-api-test-suite
+
+# Install dependencies
 npm install
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your API credentials
+# Edit .env with your credentials
 ```
 
-### Running Tests
+### Run Example Tests
 ```bash
-# Run all tests
+# Run the example tests
+npx playwright test tests/example.spec.ts
+
+# View HTML report
+npx playwright show-report
+```
+
+### Switch to Development Branch (Full Test Suite)
+```bash
+# Checkout develop branch for full 28+ tests
+git checkout develop
+
+# Run full test suite
 npm test
 
-# Run with HTML report
-npm run test:api
+# Or specific tests
+npx playwright test tests/scim-api-full.spec.ts
+```
 
-# Environment-specific runs
-npm run test:dev
-npm run test:staging  
-npm run test:prod
+### Switch to POC Branch (Demo Tests)
+```bash
+# Checkout poc branch for showcase tests
+git checkout poc
 
-# Run specific test groups
-npm run test:resource-types
-npm run test:get-user
-
-# Debug mode
-npm run test:debug
-npm run test:headed
-
-# View last report
-npm run report
+# Run POC tests (5-6 tests)
+npx playwright test tests/scim-api-poc.spec.ts
 ```
 
 ## 🔐 Environment Configuration
 
-### Required Environment Variables
+### Required Variables
 ```bash
 # OAuth2 Authentication
 OAUTH_BASE_URL=https://your-domain.com/identityservice
