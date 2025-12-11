@@ -30,15 +30,17 @@ function logTestResult(testInfo: any, operation: string, endpoint: string, expec
 
 /**
  * POC - SCIM API Tests
- * This is a showcase suite with 5 tests selected from the main branch (28 tests total)
+ * This is a showcase suite with 7 tests selected from the main branch (28 tests total)
  * Tests are exact copies from main branch, not simplified versions
  * 
  * Selected Tests:
- * - Test #2: Get User with ID 106
+ * - Test #3: Get All Users
  * - Test #6: Create User
  * - Test #10: Update User (PUT)
  * - Test #12: Delete User (DELETE)
  * - Test #14: Get Group with ID 1
+ * - Test #13: Get All Groups
+ * - Test #15: Get Groups with Pagination
  */
 test.describe('SCIM API Tests', () => {
   // Configure to run tests sequentially to avoid rate limiting
@@ -61,17 +63,13 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
-   * Test Case 2: Get User with ID
-   * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Users/106
-   * Purpose: Retrieve a specific user by their ID
+   * Test Case 3: Get All Users
+   * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Users
+   * Purpose: Retrieve all users in the system
    */
-  test('Get User with ID 106', async ({ request }, testInfo) => {
-    const userId = '106';
-    const endpoint = `${ApiEndpoints.users()}/${userId}`;
-    logApiRequest('GET', endpoint, `Retrieve specific user with ID: ${userId}`);
-    
-    // Track response time (industry standard: measure performance)
-    const startTime = Date.now();
+  test('Get All Users', async ({ request }, testInfo) => {
+    const endpoint = ApiEndpoints.users();
+    logApiRequest('GET', endpoint, 'Retrieve all users in the system');
     
     // Make the API request
     const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
@@ -79,101 +77,66 @@ test.describe('SCIM API Tests', () => {
       timeout: 30000
     });
     
-    // Validate response time
-    ApiValidators.validateResponseTime(startTime, 2000, 'GET User by ID');
-    
     // Validate response status
     await test.step(`Γ£à GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
-    // Parse and validate JSON response
+    // Update test title with actual status code    // Parse and validate JSON response
     const responseBody = await ApiValidators.validateJsonResponse(response);
     console.log('≡ƒôä Response body received:', JSON.stringify(responseBody, null, 2));
     
-    // Industry Standard: Validate required fields exist
-    ApiValidators.validateRequiredFields(responseBody, 
-      ['schemas', 'id', 'userName', 'meta'], 
-      'User resource'
-    );
+    // SCIM-specific validations for User list response
+    console.log('≡ƒöì Validating SCIM Users list response...');
     
-    // Industry Standard: Validate field types
-    ApiValidators.validateFieldTypes(responseBody, {
-      'id': 'string',
-      'userName': 'string',
-      'active': 'boolean'
-    });
-    
-    // SCIM-specific validations for User resource
-    console.log('≡ƒöì Validating SCIM User response...');
-    
-    // Validate SCIM response structure
+    // Validate SCIM list response structure
     expect(responseBody.schemas).toBeDefined();
     expect(Array.isArray(responseBody.schemas)).toBe(true);
-    console.log('Γ£à SCIM schemas array present');
+    expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+    console.log('Γ£à SCIM ListResponse schema present');
     
-    // Validate required User fields according to SCIM spec
-    expect(responseBody.id).toBeDefined();
-    expect(responseBody.id).toBe(userId);
-    console.log(`Γ£à User ID validation passed: ${responseBody.id}`);
+    // Validate pagination fields
+    expect(responseBody.totalResults).toBeDefined();
+    expect(typeof responseBody.totalResults).toBe('number');
+    expect(responseBody.totalResults).toBeGreaterThanOrEqual(0);
+    console.log(`Γ£à Total results: ${responseBody.totalResults}`);
     
-    expect(responseBody.userName).toBeDefined();
-    console.log(`Γ£à Username: ${responseBody.userName}`);
-    
-    // Validate meta information
-    expect(responseBody.meta).toBeDefined();
-    expect(responseBody.meta.resourceType).toBe('User');
-    console.log(`Γ£à Resource type validation passed: ${responseBody.meta.resourceType}`);
-    
-    expect(responseBody.meta.location).toBeDefined();
-    expect(responseBody.meta.location).toContain(`/Users/${userId}`);
-    console.log(`Γ£à Location validation passed: ${responseBody.meta.location}`);
-    
-    // Validate optional but common User fields
-    if (responseBody.name) {
-      console.log(`Γ£à Name object present:`, responseBody.name);
-      if (responseBody.name.givenName) console.log(`  - Given Name: ${responseBody.name.givenName}`);
-      if (responseBody.name.familyName) console.log(`  - Family Name: ${responseBody.name.familyName}`);
-      if (responseBody.name.formatted) console.log(`  - Formatted Name: ${responseBody.name.formatted}`);
+    if (responseBody.totalResults > 0) {
+      expect(responseBody.itemsPerPage).toBeDefined();
+      expect(responseBody.startIndex).toBeDefined();
+      console.log(`Γ£à Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
     }
     
-    if (responseBody.emails) {
-      expect(Array.isArray(responseBody.emails)).toBe(true);
-      console.log(`Γ£à Emails array present with ${responseBody.emails.length} items`);
-      responseBody.emails.forEach((email: any, index: number) => {
-        expect(email.value).toBeDefined();
-        console.log(`  - Email ${index + 1}: ${email.value} (type: ${email.type || 'N/A'}, primary: ${email.primary || false})`);
+    // Validate Resources array
+    expect(responseBody.Resources).toBeDefined();
+    expect(Array.isArray(responseBody.Resources)).toBe(true);
+    console.log(`Γ£à Resources array contains ${responseBody.Resources.length} users`);
+    
+    // Validate each user in the response
+    if (responseBody.Resources.length > 0) {
+      responseBody.Resources.forEach((user: any, index: number) => {
+        console.log(`≡ƒöì Validating user ${index + 1}: ${user.userName || 'Unnamed'}`);
+        
+        // Required fields for User
+        expect(user.schemas).toBeDefined();
+        expect(user.id).toBeDefined();
+        expect(user.userName).toBeDefined();
+        expect(user.meta).toBeDefined();
+        expect(user.meta.resourceType).toBe('User');
+        
+        console.log(`  Γ£à ID: ${user.id}`);
+        console.log(`  Γ£à Username: ${user.userName}`);
+        console.log(`  Γ£à Status: ${user.active ? 'Active' : 'Inactive'}`);
+        console.log(`  Γ£à Location: ${user.meta.location}`);
+        
+        // Check for groups if present
+        if (user.groups && Array.isArray(user.groups)) {
+          console.log(`  Γ£à Groups: ${user.groups.length} groups`);
+          user.groups.forEach((group: any) => {
+            console.log(`    - ${group.display} (ID: ${group.value})`);
+          });
+        }
       });
-    }
-    
-    if (responseBody.phoneNumbers) {
-      expect(Array.isArray(responseBody.phoneNumbers)).toBe(true);
-      console.log(`Γ£à Phone numbers array present with ${responseBody.phoneNumbers.length} items`);
-    }
-    
-    if (responseBody.groups) {
-      expect(Array.isArray(responseBody.groups)).toBe(true);
-      console.log(`Γ£à Groups array present with ${responseBody.groups.length} items`);
-    }
-    
-    // Validate user status
-    if (responseBody.active !== undefined) {
-      expect(typeof responseBody.active).toBe('boolean');
-      console.log(`Γ£à User status: ${responseBody.active ? 'Active' : 'Inactive'}`);
-    }
-    
-    // Validate SCIM core schema is present
-    const coreSchema = 'urn:ietf:params:scim:schemas:core:2.0:User';
-    expect(responseBody.schemas).toContain(coreSchema);
-    console.log(`Γ£à SCIM core User schema validation passed`);
-    
-    // Check for Hyland-specific extensions (if present)
-    const hylandExtensions = responseBody.schemas.filter((schema: string) => 
-      schema.includes('urn:hyland:params:scim:schemas:extension')
-    );
-    if (hylandExtensions.length > 0) {
-      console.log(`Γ£à Hyland extensions found: ${hylandExtensions.length}`);
-      hylandExtensions.forEach((ext: string) => console.log(`  - ${ext}`));
     }
     
     // Validate response headers
@@ -181,12 +144,7 @@ test.describe('SCIM API Tests', () => {
     expect(contentType).toMatch(/(application\/json|application\/scim\+json)/);
     console.log(`Γ£à Content-Type validation passed: ${contentType}`);
     
-    // Validate that we got a single user (not a list)
-    expect(responseBody.totalResults).toBeUndefined(); // This should not be present for single resource
-    expect(responseBody.Resources).toBeUndefined(); // This should not be present for single resource
-    console.log('Γ£à Single user resource validation passed (not a list response)');
-    
-    console.log('≡ƒÄë Get User with ID test completed successfully!');
+    console.log('≡ƒÄë Get All Users test completed successfully!');
   });
 
   /**
@@ -643,6 +601,120 @@ test.describe('SCIM API Tests', () => {
       }
       
       console.log('≡ƒÄë Get Group with ID test completed successfully!');
+    });
+  });
+
+  /**
+   * Test Case 13: Get All Groups
+   * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Groups
+   * Purpose: Retrieve all groups in the system
+   */
+  test('Get All Groups', async ({ request }, testInfo) => {
+    const endpoint = ApiEndpoints.groups();
+    logApiRequest('GET', endpoint, 'Retrieve all groups');
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
+    });
+    
+    await test.step(`Γ£à GET ${endpoint}`, async () => {
+      ApiValidators.validateResponseStatus(response, 200);
+    });
+    
+    const responseBody = await ApiValidators.validateJsonResponse(response);
+    
+    // Validate SCIM ListResponse schema
+    expect(responseBody.schemas).toBeDefined();
+    expect(responseBody.schemas).toContain(ScimSchemas.LIST_RESPONSE);
+    console.log('Γ£à SCIM ListResponse schema present');
+    
+    // Validate pagination properties
+    expect(responseBody.totalResults).toBeDefined();
+    expect(typeof responseBody.totalResults).toBe('number');
+    console.log(`Γ£à Total results: ${responseBody.totalResults}`);
+    
+    expect(responseBody.itemsPerPage).toBeDefined();
+    expect(typeof responseBody.itemsPerPage).toBe('number');
+    console.log(`Γ£à Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
+    
+    // Validate Resources array
+    expect(responseBody.Resources).toBeDefined();
+    expect(Array.isArray(responseBody.Resources)).toBe(true);
+    console.log(`Γ£à Resources array contains ${responseBody.Resources.length} groups`);
+    
+    // Validate each group object
+    if (responseBody.Resources.length > 0) {
+      console.log('≡ƒöì Validating group responses...');
+      responseBody.Resources.slice(0, 5).forEach((group: any, index: number) => {
+        expect(group.schemas).toContain(ScimSchemas.GROUP);
+        expect(group.id).toBeDefined();
+        expect(group.displayName).toBeDefined();
+        expect(group.meta).toBeDefined();
+        expect(group.meta.resourceType).toBe('Group');
+        expect(group.meta.location).toContain(`/Groups/${group.id}`);
+        
+        console.log(`  Γ£à Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
+        console.log(`    - Location: ${group.meta.location}`);
+        if (group.members && group.members.length > 0) {
+          console.log(`    - Members: ${group.members.length} members`);
+        }
+      });
+    }
+    
+    console.log('≡ƒÄë Get All Groups test completed successfully!');
+  });
+
+  /**
+   * Test Case 15: Get Groups with Pagination
+   * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Groups?startIndex=1&count=2
+   * Purpose: Test paginated retrieval of groups
+   */
+  test('Get Groups with Pagination', async ({ request }, testInfo) => {
+    const startIndex = 1;
+    const count = 2;
+    const endpoint = `${ApiEndpoints.groups()}?startIndex=${startIndex}&count=${count}`;
+    
+    logApiRequest('GET', endpoint, `Retrieve groups with pagination (start: ${startIndex}, count: ${count})`);
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
+    });
+    
+    await test.step(`Γ£à GET ${endpoint}`, async () => {
+      ApiValidators.validateResponseStatus(response, 200);
+      
+      const responseBody = await ApiValidators.validateJsonResponse(response);
+      
+      // Validate SCIM ListResponse schema
+      expect(responseBody.schemas).toBeDefined();
+      expect(responseBody.schemas).toContain(ScimSchemas.LIST_RESPONSE);
+      console.log('Γ£à SCIM ListResponse schema present');
+      
+      // Validate pagination parameters
+      expect(responseBody.totalResults).toBeDefined();
+      console.log(`Γ£à Total results: ${responseBody.totalResults}`);
+      
+      expect(responseBody.itemsPerPage).toBeDefined();
+      expect(responseBody.itemsPerPage).toBeLessThanOrEqual(count);
+      console.log(`Γ£à Items per page: ${responseBody.itemsPerPage} (requested: ${count})`);
+      
+      expect(responseBody.startIndex).toBe(startIndex);
+      console.log(`Γ£à Start index: ${responseBody.startIndex} (requested: ${startIndex})`);
+      
+      // Validate Resources array
+      expect(responseBody.Resources).toBeDefined();
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
+      expect(responseBody.Resources.length).toBeLessThanOrEqual(count);
+      console.log(`Γ£à Resources array contains ${responseBody.Resources.length} groups (max: ${count})`);
+      
+      if (responseBody.Resources.length > 0) {
+        responseBody.Resources.forEach((group: any, index: number) => {
+          console.log(`  Γ£à Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
+        });
+      }
+      
+      console.log('Γ£à Pagination logic validated');
+      console.log('≡ƒÄë Get Groups with Pagination test completed successfully!');
     });
   });
 });
