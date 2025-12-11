@@ -5,7 +5,7 @@ import { FullConfig } from '@playwright/test';
  * Validates environment variables and sets up project-level configuration
  */
 async function globalSetup(config: FullConfig) {
-  console.log('🚀 Setting up global test configuration...');
+  console.log('[START] Setting up global test configuration...');
   
   // Validate required environment variables
   const requiredEnvVars = [
@@ -21,12 +21,12 @@ async function globalSetup(config: FullConfig) {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
   
-  console.log('✅ Environment variables validated');
-  console.log(`📍 OAuth Base URL: ${process.env.OAUTH_BASE_URL}`);
-  console.log(`🌐 API Base URL: ${process.env.API_BASE_URL}`);
-  console.log(`🔐 Client ID: ${process.env.CLIENT_ID}`);
-  console.log(`🔑 Client Secret: [CONFIGURED]`);
-  console.log(`🎯 Scopes: ${process.env.DEFAULT_SCOPE}`);
+  console.log('[OK] Environment variables validated');
+  console.log(`[URL] OAuth Base URL: ${process.env.OAUTH_BASE_URL}`);
+  console.log(`[WEB] API Base URL: ${process.env.API_BASE_URL}`);
+  console.log(`[KEY] Client ID: ${process.env.CLIENT_ID}`);
+  console.log(`[AUTH] Client Secret: [CONFIGURED]`);
+  console.log(`[TARGET] Scopes: ${process.env.DEFAULT_SCOPE}`);
   
   // You can add more global setup logic here
   // Like pre-authentication, database setup, etc.

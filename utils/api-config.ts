@@ -85,7 +85,7 @@ export interface ApiTestContext {
  * Authentication utility - generates OAuth2 token for API tests
  */
 export async function getAuthToken(request: any): Promise<OAuth2TokenResponse> {
-  console.log('🔐 Getting OAuth2 authentication token...');
+  console.log('[KEY] Getting OAuth2 authentication token...');
   
   const formData = new URLSearchParams();
   formData.append('grant_type', ProjectConfig.oauth.defaultGrantType);
@@ -94,7 +94,7 @@ export async function getAuthToken(request: any): Promise<OAuth2TokenResponse> {
   formData.append('client_secret', ProjectConfig.oauth.clientSecret);
   
   const tokenUrl = `${ProjectConfig.oauth.baseUrl}${ProjectConfig.oauth.tokenEndpoint}`;
-  console.log(`📍 Token URL: ${tokenUrl}`);
+  console.log(`[URL] Token URL: ${tokenUrl}`);
   
   const response = await request.post(tokenUrl, {
     headers: {
@@ -111,7 +111,7 @@ export async function getAuthToken(request: any): Promise<OAuth2TokenResponse> {
   }
   
   const tokenData = await response.json();
-  console.log(`✅ Token obtained successfully (expires in ${tokenData.expires_in} seconds)`);
+  console.log(`[OK] Token obtained successfully (expires in ${tokenData.expires_in} seconds)`);
   
   return tokenData;
 }
@@ -136,7 +136,7 @@ export async function createApiTestContext(request: any): Promise<ApiTestContext
     }
   };
   
-  console.log(`🚀 API test context created for base URL: ${context.baseUrl}`);
+  console.log(`[START] API test context created for base URL: ${context.baseUrl}`);
   logEndpointConfiguration();
   return context;
 }
@@ -159,11 +159,11 @@ export function getCurrentEndpointType(): ApiEndpointType {
  * Utility function to log current endpoint configuration
  */
 export function logEndpointConfiguration(): void {
-  console.log('🔧 API Endpoint Configuration:');
-  console.log(`📍 Current Type: ${getCurrentEndpointType().toUpperCase()}`);
-  console.log(`🌐 Base URL: ${ProjectConfig.api.baseUrl}`);
-  console.log(`📁 Endpoint Path: ${getCurrentEndpointPath()}`);
-  console.log(`✅ Full URL: ${ProjectConfig.api.baseUrl}${getCurrentEndpointPath()}`);
+  console.log('[SETUP] API Endpoint Configuration:');
+  console.log(`[URL] Current Type: ${getCurrentEndpointType().toUpperCase()}`);
+  console.log(`[WEB] Base URL: ${ProjectConfig.api.baseUrl}`);
+  console.log(`[FOLDER] Endpoint Path: ${getCurrentEndpointPath()}`);
+  console.log(`[OK] Full URL: ${ProjectConfig.api.baseUrl}${getCurrentEndpointPath()}`);
 }
 
 /**
@@ -230,8 +230,8 @@ export const ScimSchemas = {
  * Utility function to log API request details
  */
 export function logApiRequest(method: string, endpoint: string, description?: string): void {
-  console.log(`🌐 ${method.toUpperCase()} Request: ${endpoint}`);
-  if (description) console.log(`📝 Description: ${description}`);
+  console.log(`[WEB] ${method.toUpperCase()} Request: ${endpoint}`);
+  if (description) console.log(`[NOTE] Description: ${description}`);
 }
 
 /**
@@ -242,13 +242,13 @@ export const ApiValidators = {
     if (response.status() !== expectedStatus) {
       throw new Error(`Expected status ${expectedStatus}, got ${response.status()}`);
     }
-    console.log(`✅ Response status validation passed (${response.status()})`);
+    console.log(`[OK] Response status validation passed (${response.status()})`);
   },
   
   validateJsonResponse: async (response: any) => {
     try {
       const body = await response.json();
-      console.log('✅ Valid JSON response received');
+      console.log('[OK] Valid JSON response received');
       return body;
     } catch (error) {
       throw new Error(`Invalid JSON response: ${error}`);
@@ -265,7 +265,7 @@ export const ApiValidators = {
       throw new Error(`Expected resourceType ${resourceType}, got ${responseBody.meta?.resourceType}`);
     }
     
-    console.log('✅ SCIM response validation passed');
+    console.log('[OK] SCIM response validation passed');
   },
 
   /**
@@ -279,7 +279,7 @@ export const ApiValidators = {
     if (responseTime > maxTimeMs) {
       console.log(`⚠️  Warning: ${operationName} took ${responseTime}ms (exceeds ${maxTimeMs}ms threshold)`);
     } else {
-      console.log(`✅ Response time acceptable (< ${maxTimeMs}ms)`);
+      console.log(`[OK] Response time acceptable (< ${maxTimeMs}ms)`);
     }
     
     return responseTime;
@@ -301,7 +301,7 @@ export const ApiValidators = {
       throw new Error(`${objectName} missing required fields: ${missingFields.join(', ')}`);
     }
     
-    console.log(`✅ All required fields present in ${objectName}`);
+    console.log(`[OK] All required fields present in ${objectName}`);
   },
 
   /**
@@ -321,7 +321,7 @@ export const ApiValidators = {
       throw new Error(`Type validation failed: ${typeErrors.join('; ')}`);
     }
     
-    console.log('✅ All field types match expected types');
+    console.log('[OK] All field types match expected types');
   }
 };
 
@@ -427,7 +427,7 @@ export function getTokenUrl(): string {
  * Utility function to log test parameters (with sensitive data hidden)
  */
 export function logTestParams(params: OAuth2TestParams): void {
-  console.log('📝 Test parameters:');
+  console.log('[NOTE] Test parameters:');
   console.log(`  - Description: ${params.test_description || 'No description'}`);
   console.log(`  - Grant Type: ${params.grant_type || 'Not specified'}`);
   console.log(`  - Scope: ${params.scope || 'Not specified'}`);

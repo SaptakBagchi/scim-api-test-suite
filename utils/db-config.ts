@@ -49,9 +49,9 @@ function getDbConfigForEnvironment(): EnvironmentDbConfig {
   
   const selectedConfig = isOem ? environmentConfigs.oem : environmentConfigs.nonOem;
   
-  console.log(`🔧 Environment: ${isOem ? 'OEM (rdv-009275)' : 'Non-OEM (rdv-010318)'}`);
-  console.log(`📍 API URL: ${selectedConfig.apiBaseUrl}`);
-  console.log(`ðŸ—„ï¸  Database: ${selectedConfig.server}\\${selectedConfig.database}`);
+  console.log(`[SETUP] Environment: ${isOem ? 'OEM (rdv-009275)' : 'Non-OEM (rdv-010318)'}`);
+  console.log(`[URL] API URL: ${selectedConfig.apiBaseUrl}`);
+  console.log(`[DB] Database: ${selectedConfig.server}\\${selectedConfig.database}`);
   
   // Set the API_BASE_URL and OAUTH_BASE_URL for the test context
   process.env.API_BASE_URL = selectedConfig.apiBaseUrl;
@@ -92,16 +92,16 @@ let poolPromise: Promise<sql.ConnectionPool> | null = null;
  */
 async function getPool(): Promise<sql.ConnectionPool> {
   if (!poolPromise) {
-    console.log(`⏳ Creating database connection pool...`);
+    console.log(`[DB] Creating database connection pool...`);
     console.log(`   Server: ${dbConfig.server}`);
     console.log(`   Database: ${dbConfig.database}`);
     
     poolPromise = new sql.ConnectionPool(dbConfig)
       .connect()
       .then(pool => {
-        console.log('✅ Database connection pool successfully created and connected');
+        console.log('[OK] Database connection pool successfully created and connected');
         pool.on('error', err => {
-          console.error('❌ Database pool error:', err.message);
+          console.error('[FAIL] Database pool error:', err.message);
           poolPromise = null;
         });
         return pool;
@@ -378,7 +378,7 @@ export async function createTestUserInDatabase(username: string, institutionId?:
       `);
     
     const userNum = result.recordset[0].usernum;
-    console.log(`✅ Created test user in database: ${username} (ID: ${userNum}, InstitutionId: ${institutionId || 'N/A'})`);
+    console.log(`[OK] Created test user in database: ${username} (ID: ${userNum}, InstitutionId: ${institutionId || 'N/A'})`);
     return userNum;
   });
 }
@@ -401,7 +401,7 @@ export async function deleteTestUserFromDatabase(userNum: number): Promise<void>
       .input('userNum', sql.BigInt, userNum)
       .query(`DELETE FROM hsi.useraccount WHERE usernum = @userNum`);
     
-    console.log(`🗑️  Cleaned up test user from database (ID: ${userNum})`);
+    console.log(`[CLEANUP] Cleaned up test user from database (ID: ${userNum})`);
   });
 }
 

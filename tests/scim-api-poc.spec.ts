@@ -21,7 +21,7 @@ import {
  */
 function logTestResult(testInfo: any, operation: string, endpoint: string, expectedStatus: number, actualStatus: number, result: 'PASS' | 'FAIL') {
   const statusInfo = `[Expected: ${expectedStatus}, Actual: ${actualStatus}]`;
-  const resultEmoji = result === 'PASS' ? 'Γ£à' : 'Γ¥î';
+  const resultEmoji = result === 'PASS' ? '£[OK]' : '¥î';
   testInfo.annotations.push({ 
     type: 'status-codes', 
     description: `${resultEmoji} ${operation} ${endpoint} ${statusInfo}` 
@@ -50,16 +50,16 @@ test.describe('SCIM API Tests', () => {
   
   // Setup authentication before running tests
   test.beforeAll(async ({ request }) => {
-    console.log('≡ƒöº Setting up API authentication...');
+    console.log('[SETUP] Setting up API authentication...');
     apiContext = await createApiTestContext(request);
-    console.log('Γ£à Authentication setup complete');
+    console.log('[OK] Authentication setup complete');
   });
 
   test.beforeEach(async () => {
-    console.log('≡ƒÅù∩╕Å Test Setup:');
-    console.log(`≡ƒôì Base URL: ${apiContext.baseUrl}`);
-    console.log('≡ƒöæ Authorization: Bearer [TOKEN_SET]');
-    console.log('---');
+    console.log('Test Setup:');
+    console.log(`[URL] Base URL: ${apiContext.baseUrl}`);
+    console.log('[KEY] Authorization: Bearer [TOKEN_SET]');
+    console.log('');
   });
 
   /**
@@ -78,44 +78,44 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status
-    await test.step(`Γ£à GET ${endpoint}`, async () => {
+    await test.step(`£[OK] GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
     // Update test title with actual status code    // Parse and validate JSON response
     const responseBody = await ApiValidators.validateJsonResponse(response);
-    console.log('≡ƒôä Response body received:', JSON.stringify(responseBody, null, 2));
+    console.log('≡[DATA] Response body received:', JSON.stringify(responseBody, null, 2));
     
     // SCIM-specific validations for User list response
-    console.log('≡ƒöì Validating SCIM Users list response...');
+    console.log('[CHECK] Validating SCIM Users list response...');
     
     // Validate SCIM list response structure
     expect(responseBody.schemas).toBeDefined();
     expect(Array.isArray(responseBody.schemas)).toBe(true);
     expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
-    console.log('Γ£à SCIM ListResponse schema present');
+    console.log('[OK] SCIM ListResponse schema present');
     
     // Validate pagination fields
     expect(responseBody.totalResults).toBeDefined();
     expect(typeof responseBody.totalResults).toBe('number');
     expect(responseBody.totalResults).toBeGreaterThanOrEqual(0);
-    console.log(`Γ£à Total results: ${responseBody.totalResults}`);
+    console.log(`[OK] Total results: ${responseBody.totalResults}`);
     
     if (responseBody.totalResults > 0) {
       expect(responseBody.itemsPerPage).toBeDefined();
       expect(responseBody.startIndex).toBeDefined();
-      console.log(`Γ£à Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
+      console.log(`[OK] Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
     }
     
     // Validate Resources array
     expect(responseBody.Resources).toBeDefined();
     expect(Array.isArray(responseBody.Resources)).toBe(true);
-    console.log(`Γ£à Resources array contains ${responseBody.Resources.length} users`);
+    console.log(`[OK] Resources array contains ${responseBody.Resources.length} users`);
     
     // Validate each user in the response
     if (responseBody.Resources.length > 0) {
       responseBody.Resources.forEach((user: any, index: number) => {
-        console.log(`≡ƒöì Validating user ${index + 1}: ${user.userName || 'Unnamed'}`);
+        console.log(`[CHECK] Validating user ${index + 1}: ${user.userName || 'Unnamed'}`);
         
         // Required fields for User
         expect(user.schemas).toBeDefined();
@@ -124,16 +124,16 @@ test.describe('SCIM API Tests', () => {
         expect(user.meta).toBeDefined();
         expect(user.meta.resourceType).toBe('User');
         
-        console.log(`  Γ£à ID: ${user.id}`);
-        console.log(`  Γ£à Username: ${user.userName}`);
-        console.log(`  Γ£à Status: ${user.active ? 'Active' : 'Inactive'}`);
-        console.log(`  Γ£à Location: ${user.meta.location}`);
+        console.log(`[OK] ID: ${user.id}`);
+        console.log(`[OK] Username: ${user.userName}`);
+        console.log(`[OK] Status: ${user.active ? 'Active' : 'Inactive'}`);
+        console.log(`[OK] Location: ${user.meta.location}`);
         
         // Check for groups if present
         if (user.groups && Array.isArray(user.groups)) {
-          console.log(`  Γ£à Groups: ${user.groups.length} groups`);
+          console.log(`[OK] Groups: ${user.groups.length} groups`);
           user.groups.forEach((group: any) => {
-            console.log(`    - ${group.display} (ID: ${group.value})`);
+            console.log(`${group.display} (ID: ${group.value})`);
           });
         }
       });
@@ -142,9 +142,9 @@ test.describe('SCIM API Tests', () => {
     // Validate response headers
     const contentType = response.headers()['content-type'];
     expect(contentType).toMatch(/(application\/json|application\/scim\+json)/);
-    console.log(`Γ£à Content-Type validation passed: ${contentType}`);
+    console.log(`[OK] Content-Type validation passed: ${contentType}`);
     
-    console.log('≡ƒÄë Get All Users test completed successfully!');
+    console.log('[DONE] Get All Users test completed successfully!');
   });
 
   /**
@@ -156,8 +156,8 @@ test.describe('SCIM API Tests', () => {
     // Skip this test in OEM environments due to known limitation
     if (isOemEnvironment()) {
       test.skip();
-      console.log('ΓÅ¡∩╕Å  Skipping Create User test in OEM environment (known limitation)');
-      console.log('Γä╣∩╕Å  OEM systems require institutionId validation that prevents direct user creation');
+      console.log('Skipping Create User test in OEM environment (known limitation)');
+      console.log('OEM systems require institutionId validation that prevents direct user creation');
       return;
     }
     
@@ -180,7 +180,7 @@ test.describe('SCIM API Tests', () => {
     };
     
     logApiRequest('POST', endpoint, `Create new user: ${uniqueUserName}`);
-    console.log('≡ƒôñ Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('≡ôñ Request body:', JSON.stringify(requestBody, null, 2));
     
     // Make the API request
     const response = await request.post(`${apiContext.baseUrl}${endpoint}`, {
@@ -193,40 +193,40 @@ test.describe('SCIM API Tests', () => {
     });
     
     // Validate response status (201 Created)
-    await test.step(`Γ£à POST ${endpoint}`, async () => {
+    await test.step(`£[OK] POST ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 201);
     });
     
     // Update test title with actual status code    // Parse and validate JSON response
     const responseBody = await ApiValidators.validateJsonResponse(response);
-    console.log('≡ƒôä Response body received:', JSON.stringify(responseBody, null, 2));
+    console.log('≡[DATA] Response body received:', JSON.stringify(responseBody, null, 2));
     
     // SCIM-specific validations for created user
-    console.log('≡ƒöì Validating SCIM created User response...');
+    console.log('[CHECK] Validating SCIM created User response...');
     
     // Validate SCIM User schema
     expect(responseBody.schemas).toBeDefined();
     expect(Array.isArray(responseBody.schemas)).toBe(true);
     expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:User');
-    console.log('Γ£à SCIM User schema present');
+    console.log('[OK] SCIM User schema present');
     
     // Validate required user fields
     expect(responseBody.id).toBeDefined();
     expect(typeof responseBody.id).toBe('string');
-    console.log(`Γ£à User ID: ${responseBody.id}`);
+    console.log(`[OK] User ID: ${responseBody.id}`);
     
     expect(responseBody.userName).toBeDefined();
     expect(responseBody.userName.toUpperCase()).toBe(uniqueUserName.toUpperCase());
-    console.log(`Γ£à Username: ${responseBody.userName} (matches input: ${uniqueUserName})`);
+    console.log(`[OK] Username: ${responseBody.userName} (matches input: ${uniqueUserName})`);
     
     expect(responseBody.active).toBeDefined();
     expect(responseBody.active).toBe(true);
-    console.log(`Γ£à Active status: ${responseBody.active}`);
+    console.log(`[OK] Active status: ${responseBody.active}`);
     
     // Validate name object
     expect(responseBody.name).toBeDefined();
     expect(responseBody.name.formatted).toBeDefined();
-    console.log(`Γ£à Formatted name: ${responseBody.name.formatted}`);
+    console.log(`[OK] Formatted name: ${responseBody.name.formatted}`);
     
     // Validate groups array
     expect(responseBody.groups).toBeDefined();
@@ -237,7 +237,7 @@ test.describe('SCIM API Tests', () => {
         expect(group.display).toBeDefined();
         expect(group.type).toBeDefined();
         expect(group.$ref).toBeDefined();
-        console.log(`Γ£à Group ${index + 1}: ${group.display} (ID: ${group.value})`);
+        console.log(`[OK] Group ${index + 1}: ${group.display} (ID: ${group.value})`);
       });
     }
     
@@ -246,19 +246,19 @@ test.describe('SCIM API Tests', () => {
     expect(responseBody.meta.resourceType).toBe('User');
     expect(responseBody.meta.location).toBeDefined();
     expect(responseBody.meta.location).toContain(`/Users/${responseBody.id}`);
-    console.log(`Γ£à Resource type: ${responseBody.meta.resourceType}`);
-    console.log(`Γ£à Location: ${responseBody.meta.location}`);
+    console.log(`[OK] Resource type: ${responseBody.meta.resourceType}`);
+    console.log(`[OK] Location: ${responseBody.meta.location}`);
     
     // Validate response headers
     const contentType = response.headers()['content-type'];
     expect(contentType).toMatch(/(application\/json|application\/scim\+json)/);
-    console.log(`Γ£à Content-Type validation passed: ${contentType}`);
+    console.log(`[OK] Content-Type validation passed: ${contentType}`);
     
     // Store created user ID for potential cleanup
     const createdUserId = responseBody.id;
-    console.log(`≡ƒåö Created user with ID: ${createdUserId} for potential cleanup`);
+    console.log(`Created user with ID: ${createdUserId} for potential cleanup`);
     
-    console.log('≡ƒÄë Create User test completed successfully!');
+    console.log('[DONE] Create User test completed successfully!');
   });
 
   /**
@@ -286,7 +286,7 @@ test.describe('SCIM API Tests', () => {
       ]
     };
     
-    console.log('≡ƒöº Creating user for PUT test...');
+    console.log('[SETUP] Creating user for PUT test...');
     const createResponse = await request.post(`${apiContext.baseUrl}${createEndpoint}`, {
       headers: {
         ...apiContext.headers,
@@ -298,9 +298,9 @@ test.describe('SCIM API Tests', () => {
     
     // Check if user creation was successful
     if (createResponse.status() !== 201) {
-      console.log(`ΓÜá∩╕Å  Could not create user for PUT test (Status: ${createResponse.status()})`);
-      console.log('≡ƒöì Skipping PUT test due to user creation failure');
-      console.log('Γ£à Test completed - PUT test prerequisite failed');
+      console.log(`Could not create user for PUT test (Status: ${createResponse.status()})`);
+      console.log('[CHECK] Skipping PUT test due to user creation failure');
+      console.log('[OK] Test completed - PUT test prerequisite failed');
       return;
     }
     
@@ -308,7 +308,7 @@ test.describe('SCIM API Tests', () => {
     ApiValidators.validateResponseStatus(createResponse, 201);
     const createdUser = await createResponse.json();
     const userId = createdUser.id;
-    console.log(`Γ£à Created user with ID: ${userId} for PUT test`);
+    console.log(`[OK] Created user with ID: ${userId} for PUT test`);
     
     // Now update the user with PUT
     const updateEndpoint = `${ApiEndpoints.users()}/${userId}`;
@@ -326,7 +326,7 @@ test.describe('SCIM API Tests', () => {
     };
     
     logApiRequest('PUT', updateEndpoint, `Update user ${userId} with PUT method`);
-    console.log('≡ƒôñ Request body:', JSON.stringify(updateRequestBody, null, 2));
+    console.log('≡ôñ Request body:', JSON.stringify(updateRequestBody, null, 2));
     
     // Make the PUT request
     const response = await request.put(`${apiContext.baseUrl}${updateEndpoint}`, {
@@ -342,35 +342,35 @@ test.describe('SCIM API Tests', () => {
     // Handle potential business rule violations (like duplicate usernames)
     if (response.status() === 500) {
       const errorBody = await response.text();
-      console.log(`ΓÜá∩╕Å PUT operation returned 500 - checking if it's a business rule violation...`);
-      console.log('≡ƒôä Error details:', errorBody);
+      console.log(`PUT operation returned 500 - checking if it's a business rule violation...`);
+      console.log('≡[DATA] Error details:', errorBody);
       
       // If it's a business rule violation (like duplicate username), that means PUT is working
       // but our test data caused a conflict - this is still a failure since our test should use proper data
       if (errorBody.includes('name already exists') || errorBody.includes('duplicate') || errorBody.includes('conflict')) {
-        console.log('Γ£à PUT operation is supported - error due to business rule violation');
-        console.log('Γ¥î Test design issue: should use unique data to avoid conflicts');
+        console.log('[OK] PUT operation is supported - error due to business rule violation');
+        console.log('Test design issue: should use unique data to avoid conflicts');
         throw new Error('PUT test failed due to data conflict - test needs better unique data');
       }
       
       // If it's a different 500 error, PUT might not be supported
-      console.log('ΓÜá∩╕Å PUT operation failed with unexpected 500 error');
+      console.log('PUT operation failed with unexpected 500 error');
       expect(response.status()).toBe(200); // This will fail and show the details
       return;
     }
     
     // Check for unsupported operation errors
     if (response.status() === 501 || response.status() === 405) {
-      console.log(`ΓÜá∩╕Å PUT operation not supported (Status: ${response.status()}) - this contradicts documentation`);
-      console.log('≡ƒöì Documentation indicates PUT should be supported (Currently Used By Hyland IdP: Yes)');
+      console.log(`PUT operation not supported (Status: ${response.status()}) - this contradicts documentation`);
+      console.log('[CHECK] Documentation indicates PUT should be supported (Currently Used By Hyland IdP: Yes)');
       const errorBody = await response.text();
-      console.log('≡ƒôä Error details:', errorBody);
+      console.log('≡[DATA] Error details:', errorBody);
       expect(response.status()).toBe(200); // This will fail and show the mismatch
       return;
     }
     
     // Validate successful response status (200 OK)
-    await test.step(`Γ£à PUT ${updateEndpoint}`, async () => {
+    await test.step(`£[OK] PUT ${updateEndpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -379,36 +379,36 @@ test.describe('SCIM API Tests', () => {
     
     // Update test title with actual status code    // Parse and validate JSON response
     const responseBody = await ApiValidators.validateJsonResponse(response);
-    console.log('≡ƒôä Response body received:', JSON.stringify(responseBody, null, 2));
+    console.log('≡[DATA] Response body received:', JSON.stringify(responseBody, null, 2));
     
     // SCIM-specific validations for updated user
-    console.log('≡ƒöì Validating SCIM updated User response...');
+    console.log('[CHECK] Validating SCIM updated User response...');
     
     // Validate SCIM User schema
     expect(responseBody.schemas).toBeDefined();
     expect(Array.isArray(responseBody.schemas)).toBe(true);
     expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:User');
-    console.log('Γ£à SCIM User schema present');
+    console.log('[OK] SCIM User schema present');
     
     // Validate user ID matches
     expect(responseBody.id).toBeDefined();
     expect(responseBody.id).toBe(userId);
-    console.log(`Γ£à User ID matches: ${responseBody.id}`);
+    console.log(`[OK] User ID matches: ${responseBody.id}`);
     
     // Validate updated fields
     expect(responseBody.userName).toBeDefined();
     expect(responseBody.userName.toUpperCase()).toBe(uniqueUpdateUserName.toUpperCase());
-    console.log(`Γ£à Username updated: ${responseBody.userName}`);
+    console.log(`[OK] Username updated: ${responseBody.userName}`);
     
     expect(responseBody.active).toBeDefined();
     expect(responseBody.active).toBe(true);
-    console.log(`Γ£à Active status: ${responseBody.active}`);
+    console.log(`[OK] Active status: ${responseBody.active}`);
     
     // Validate email field
     if (responseBody.email) {
-      console.log(`Γ£à Email updated: ${responseBody.email}`);
+      console.log(`[OK] Email updated: ${responseBody.email}`);
     } else if (responseBody.emails && Array.isArray(responseBody.emails) && responseBody.emails.length > 0) {
-      console.log(`Γ£à Email in emails array: ${responseBody.emails[0].value}`);
+      console.log(`[OK] Email in emails array: ${responseBody.emails[0].value}`);
     }
     
     // Validate meta object
@@ -416,15 +416,15 @@ test.describe('SCIM API Tests', () => {
     expect(responseBody.meta.resourceType).toBe('User');
     expect(responseBody.meta.location).toBeDefined();
     expect(responseBody.meta.location).toContain(`/Users/${userId}`);
-    console.log(`Γ£à Resource type: ${responseBody.meta.resourceType}`);
-    console.log(`Γ£à Location: ${responseBody.meta.location}`);
+    console.log(`[OK] Resource type: ${responseBody.meta.resourceType}`);
+    console.log(`[OK] Location: ${responseBody.meta.location}`);
     
     // Validate response headers
     const contentType = response.headers()['content-type'];
     expect(contentType).toMatch(/(application\/json|application\/scim\+json)/);
-    console.log(`Γ£à Content-Type validation passed: ${contentType}`);
+    console.log(`[OK] Content-Type validation passed: ${contentType}`);
     
-    console.log('≡ƒÄë Update User (PUT) test completed successfully!');
+    console.log('[DONE] Update User (PUT) test completed successfully!');
   });
 
   /**
@@ -460,22 +460,22 @@ test.describe('SCIM API Tests', () => {
           // Safety check: Ensure we're not deleting a protected user
           if (PROTECTED_USERS.includes(userName.toUpperCase())) {
             test.skip();
-            console.log(`≡ƒ¢æ SAFETY CHECK: Refusing to delete protected user: ${userName}`);
-            console.log(`ΓÅ¡∩╕Å  Skipping Delete User test - cannot delete system users`);
+            console.log(`SAFETY CHECK: Refusing to delete protected user: ${userName}`);
+            console.log(`Skipping Delete User test - cannot delete system users`);
             return;
           }
           
           userIdToDelete = user.id;
-          console.log(`≡ƒÅó OEM Mode: Found user ${userName} (ID: ${userIdToDelete}) for DELETE test`);
+          console.log(`OEM Mode: Found user ${userName} (ID: ${userIdToDelete}) for DELETE test`);
         } else {
           test.skip();
-          console.log(`ΓÅ¡∩╕Å  Skipping Delete User test - ${testUsername} not found in OEM environment`);
-          console.log(`Γä╣∩╕Å  To enable this test, manually create user ${testUsername} with institutionId=${institutionId}`);
+          console.log(`Skipping Delete User test - ${testUsername} not found in OEM environment`);
+          console.log(`To enable this test, manually create user ${testUsername} with institutionId=${institutionId}`);
           return;
         }
       } else {
         test.skip();
-        console.log('ΓÅ¡∩╕Å  Skipping Delete User test - unable to search for test user in OEM');
+        console.log('Skipping Delete User test - unable to search for test user in OEM');
         return;
       }
     } else {
@@ -495,7 +495,7 @@ test.describe('SCIM API Tests', () => {
       expect(createResponse.status()).toBe(201);
       const createdUser = await createResponse.json();
       userIdToDelete = createdUser.id;
-      console.log(`Γ£à Created user with ID: ${userIdToDelete} for DELETE test`);
+      console.log(`[OK] Created user with ID: ${userIdToDelete} for DELETE test`);
     }
     
     const endpoint = `${ApiEndpoints.users()}/${userIdToDelete}`;
@@ -507,9 +507,9 @@ test.describe('SCIM API Tests', () => {
 
     // Expected response is 204 No Content for successful deletion
     if (response.status() === 204) {
-      await test.step(`Γ£à DELETE ${endpoint}`, async () => {
-        console.log('Γ£à DELETE operation successful (204 No Content)');
-        console.log(`Γ£à User ${userIdToDelete} deleted successfully`);
+      await test.step(`£[OK] DELETE ${endpoint}`, async () => {
+        console.log('[OK] DELETE operation successful (204 No Content)');
+        console.log(`[OK] User ${userIdToDelete} deleted successfully`);
       });
       
       // Update test title with actual status code      return;
@@ -517,35 +517,35 @@ test.describe('SCIM API Tests', () => {
 
     // Handle error responses
     if (response.status() === 404) {
-      await test.step(`Γ£à DELETE ${endpoint}`, async () => {
-        console.log('ΓÜá∩╕Å  User not found (Status: 404)');
-        console.log('≡ƒöì User may have already been deleted or does not exist');
-        console.log('Γ£à Test completed - DELETE operation availability verified');
+      await test.step(`£[OK] DELETE ${endpoint}`, async () => {
+        console.log('User not found (Status: 404)');
+        console.log('[CHECK] User may have already been deleted or does not exist');
+        console.log('[OK] Test completed - DELETE operation availability verified');
       });
       
       // Update test title with actual status code      return;
     }
 
     if (response.status() === 405) {
-      await test.step(`Γ£à DELETE ${endpoint}`, async () => {
-        console.log('ΓÜá∩╕Å  DELETE operation not allowed by this SCIM implementation (Status: 405)');
-        console.log('≡ƒöì This is expected behavior for some SCIM servers that do not support DELETE');
-        console.log('Γ£à Test completed - DELETE operation availability verified');
+      await test.step(`£[OK] DELETE ${endpoint}`, async () => {
+        console.log('DELETE operation not allowed by this SCIM implementation (Status: 405)');
+        console.log('[CHECK] This is expected behavior for some SCIM servers that do not support DELETE');
+        console.log('[OK] Test completed - DELETE operation availability verified');
       });
       
       // Update test title with actual status code      return;
     }
 
     if (response.status() === 500) {
-      console.log('ΓÜá∩╕Å  DELETE operation failed with server error (Status: 500)');
-      console.log('≡ƒöì This may indicate DELETE is not supported by this SCIM implementation');
-      console.log('Γ£à Test completed - DELETE operation availability verified');
+      console.log('DELETE operation failed with server error (Status: 500)');
+      console.log('[CHECK] This may indicate DELETE is not supported by this SCIM implementation');
+      console.log('[OK] Test completed - DELETE operation availability verified');
       return;
     }
 
     // If we get here with an unexpected status, log it
-    console.log(`ΓÜá∩╕Å  Unexpected DELETE response status: ${response.status()}`);
-    console.log('Γ£à Test completed - DELETE operation response logged');
+    console.log(`Unexpected DELETE response status: ${response.status()}`);
+    console.log('[OK] Test completed - DELETE operation response logged');
   });
 
   /**
@@ -562,7 +562,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`Γ£à GET ${endpoint}`, async () => {
+    await test.step(`£[OK] GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
       
       const responseBody = await ApiValidators.validateJsonResponse(response);
@@ -570,37 +570,37 @@ test.describe('SCIM API Tests', () => {
       // Validate SCIM Group schema
       expect(responseBody.schemas).toBeDefined();
       expect(responseBody.schemas).toContain(ScimSchemas.GROUP);
-      console.log('Γ£à SCIM core Group schema validation passed');
+      console.log('[OK] SCIM core Group schema validation passed');
       
       // Validate basic group properties
       expect(responseBody.id).toBe(groupId);
-      console.log(`Γ£à Group ID: ${responseBody.id}`);
+      console.log(`[OK] Group ID: ${responseBody.id}`);
       
       expect(responseBody.displayName).toBeDefined();
-      console.log(`Γ£à Display Name: ${responseBody.displayName}`);
+      console.log(`[OK] Display Name: ${responseBody.displayName}`);
       
       // Validate meta object
       expect(responseBody.meta).toBeDefined();
       expect(responseBody.meta.resourceType).toBe('Group');
       expect(responseBody.meta.location).toBeDefined();
       expect(responseBody.meta.location).toContain(`/Groups/${groupId}`);
-      console.log(`Γ£à Resource type: ${responseBody.meta.resourceType}`);
-      console.log(`Γ£à Location: ${responseBody.meta.location}`);
+      console.log(`[OK] Resource type: ${responseBody.meta.resourceType}`);
+      console.log(`[OK] Location: ${responseBody.meta.location}`);
       
       // Validate members array (if present)
       if (responseBody.members && Array.isArray(responseBody.members)) {
-        console.log(`Γ£à Members array present with ${responseBody.members.length} members`);
+        console.log(`[OK] Members array present with ${responseBody.members.length} members`);
         responseBody.members.forEach((member: any, index: number) => {
           expect(member.value).toBeDefined();
           expect(member.type).toBeDefined();
-          console.log(`  - Member ${index + 1}: ${member.type} ID ${member.value}`);
-          if (member.$ref) console.log(`    - Reference: ${member.$ref}`);
+          console.log(`Member ${index + 1}: ${member.type} ID ${member.value}`);
+          if (member.$ref) console.log(`Reference: ${member.$ref}`);
         });
       } else {
-        console.log('≡ƒô¥ No members array present');
+        console.log('No members array present');
       }
       
-      console.log('≡ƒÄë Get Group with ID test completed successfully!');
+      console.log('[DONE] Get Group with ID test completed successfully!');
     });
   });
 
@@ -617,7 +617,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`Γ£à GET ${endpoint}`, async () => {
+    await test.step(`£[OK] GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
     });
     
@@ -626,25 +626,25 @@ test.describe('SCIM API Tests', () => {
     // Validate SCIM ListResponse schema
     expect(responseBody.schemas).toBeDefined();
     expect(responseBody.schemas).toContain(ScimSchemas.LIST_RESPONSE);
-    console.log('Γ£à SCIM ListResponse schema present');
+    console.log('[OK] SCIM ListResponse schema present');
     
     // Validate pagination properties
     expect(responseBody.totalResults).toBeDefined();
     expect(typeof responseBody.totalResults).toBe('number');
-    console.log(`Γ£à Total results: ${responseBody.totalResults}`);
+    console.log(`[OK] Total results: ${responseBody.totalResults}`);
     
     expect(responseBody.itemsPerPage).toBeDefined();
     expect(typeof responseBody.itemsPerPage).toBe('number');
-    console.log(`Γ£à Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
+    console.log(`[OK] Items per page: ${responseBody.itemsPerPage}, Start index: ${responseBody.startIndex}`);
     
     // Validate Resources array
     expect(responseBody.Resources).toBeDefined();
     expect(Array.isArray(responseBody.Resources)).toBe(true);
-    console.log(`Γ£à Resources array contains ${responseBody.Resources.length} groups`);
+    console.log(`[OK] Resources array contains ${responseBody.Resources.length} groups`);
     
     // Validate each group object
     if (responseBody.Resources.length > 0) {
-      console.log('≡ƒöì Validating group responses...');
+      console.log('[CHECK] Validating group responses...');
       responseBody.Resources.slice(0, 5).forEach((group: any, index: number) => {
         expect(group.schemas).toContain(ScimSchemas.GROUP);
         expect(group.id).toBeDefined();
@@ -653,15 +653,15 @@ test.describe('SCIM API Tests', () => {
         expect(group.meta.resourceType).toBe('Group');
         expect(group.meta.location).toContain(`/Groups/${group.id}`);
         
-        console.log(`  Γ£à Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
-        console.log(`    - Location: ${group.meta.location}`);
+        console.log(`[OK] Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
+        console.log(`Location: ${group.meta.location}`);
         if (group.members && group.members.length > 0) {
-          console.log(`    - Members: ${group.members.length} members`);
+          console.log(`Members: ${group.members.length} members`);
         }
       });
     }
     
-    console.log('≡ƒÄë Get All Groups test completed successfully!');
+    console.log('[DONE] Get All Groups test completed successfully!');
   });
 
   /**
@@ -680,7 +680,7 @@ test.describe('SCIM API Tests', () => {
       headers: apiContext.headers
     });
     
-    await test.step(`Γ£à GET ${endpoint}`, async () => {
+    await test.step(`£[OK] GET ${endpoint}`, async () => {
       ApiValidators.validateResponseStatus(response, 200);
       
       const responseBody = await ApiValidators.validateJsonResponse(response);
@@ -688,33 +688,33 @@ test.describe('SCIM API Tests', () => {
       // Validate SCIM ListResponse schema
       expect(responseBody.schemas).toBeDefined();
       expect(responseBody.schemas).toContain(ScimSchemas.LIST_RESPONSE);
-      console.log('Γ£à SCIM ListResponse schema present');
+      console.log('[OK] SCIM ListResponse schema present');
       
       // Validate pagination parameters
       expect(responseBody.totalResults).toBeDefined();
-      console.log(`Γ£à Total results: ${responseBody.totalResults}`);
+      console.log(`[OK] Total results: ${responseBody.totalResults}`);
       
       expect(responseBody.itemsPerPage).toBeDefined();
       expect(responseBody.itemsPerPage).toBeLessThanOrEqual(count);
-      console.log(`Γ£à Items per page: ${responseBody.itemsPerPage} (requested: ${count})`);
+      console.log(`[OK] Items per page: ${responseBody.itemsPerPage} (requested: ${count})`);
       
       expect(responseBody.startIndex).toBe(startIndex);
-      console.log(`Γ£à Start index: ${responseBody.startIndex} (requested: ${startIndex})`);
+      console.log(`[OK] Start index: ${responseBody.startIndex} (requested: ${startIndex})`);
       
       // Validate Resources array
       expect(responseBody.Resources).toBeDefined();
       expect(Array.isArray(responseBody.Resources)).toBe(true);
       expect(responseBody.Resources.length).toBeLessThanOrEqual(count);
-      console.log(`Γ£à Resources array contains ${responseBody.Resources.length} groups (max: ${count})`);
+      console.log(`[OK] Resources array contains ${responseBody.Resources.length} groups (max: ${count})`);
       
       if (responseBody.Resources.length > 0) {
         responseBody.Resources.forEach((group: any, index: number) => {
-          console.log(`  Γ£à Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
+          console.log(`[OK] Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
         });
       }
       
-      console.log('Γ£à Pagination logic validated');
-      console.log('≡ƒÄë Get Groups with Pagination test completed successfully!');
+      console.log('[OK] Pagination logic validated');
+      console.log('[DONE] Get Groups with Pagination test completed successfully!');
     });
   });
 });
