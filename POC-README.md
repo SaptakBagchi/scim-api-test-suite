@@ -1,41 +1,62 @@
 # SCIM API POC Test Suite
 
 ## Overview
-This is a **Proof of Concept (POC)** branch with simplified test cases for demonstration purposes.
+This is the **POC (Proof of Concept)** branch with **5 tests selected from the main branch's 28 tests**. These are **exact copies** from the main branch, not simplified versions.
+
+**Philosophy**: POC = Main - 23 tests
+
+The POC branch is a showcase with fewer tests to demonstrate the framework capabilities. Everything is identical to main except the number of tests.
 
 ## POC Test Cases (5 Tests)
 
+These are exact copies of the following tests from main branch:
+
 ### User Operations (4 tests)
-1. **POC-1: Get User with ID** - GET operation to retrieve a user
-2. **POC-2: Create User** - POST operation to create a new user
-3. **POC-3: Update User (PUT)** - PUT operation to update an existing user
-4. **POC-4: Delete User** - DELETE operation to remove a user
+1. **Test #2: Get User with ID 106** - Retrieve a specific user by ID
+2. **Test #6: Create User** - Create a new user in the system  
+3. **Test #10: Update User (PUT)** - Complete replacement of an existing user
+4. **Test #12: Delete User (DELETE)** - Delete a user from the system
 
 ### Group Operations (1 test)
-5. **POC-5: Get Group with ID** - GET operation to retrieve a group
+5. **Test #14: Get Group with ID 1** - Retrieve a specific group (MANAGER)
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Run POC Tests
+### 2. Configure Environment
 ```bash
-# Run only POC tests
-npx playwright test tests/scim-api-poc.spec.ts
-
-# Run with UI mode
-npx playwright test tests/scim-api-poc.spec.ts --ui
-
-# Run with headed browser
-npx playwright test tests/scim-api-poc.spec.ts --headed
+# Edit .env file with your credentials
 ```
 
-### 3. View Test Report
+### 3. Run POC Tests (Same Commands as Main Branch)
+
+**Non-OEM with SCIM endpoint:**
+```powershell
+$env:OEM = "false"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --reporter=line
+```
+
+**Non-OEM with API Server endpoint:**
+```powershell
+$env:OEM = "false"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --reporter=line
+```
+
+**OEM with SCIM endpoint:**
+```powershell
+$env:OEM = "true"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --reporter=line
+```
+
+**OEM with API Server endpoint:**
+```powershell
+$env:OEM = "true"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --reporter=line
+```
+
+### 4. View Test Report
 ```bash
-npx playwright show-report
+npm run report
 ```
 
 ## File Structure (POC Branch)
@@ -80,11 +101,33 @@ npx playwright test tests/scim-api.spec.ts
 npx playwright test tests/scim-api-poc.spec.ts
 ```
 
-## Notes
-- POC tests use the same authentication and configuration as the full suite
-- Environment variables are configured in `.env` file
-- POC tests are designed for quick validation and demonstration
-- For complete test coverage, use the full test suite on the `main` branch
+## 📊 Comparison with Main Branch
+
+| Aspect | Main Branch | POC Branch |
+|--------|-------------|------------|
+| Test Count | 28 tests | 5 tests |
+| Test File | `scim-api.spec.ts` | `scim-api-poc.spec.ts` |
+| Execution Time | ~45-60 seconds | ~5-6 seconds |
+| Commands | ✅ **Same** | ✅ **Same** |
+| Scripts | ✅ **Same** | ✅ **Same** |
+| Framework | ✅ **Same** | ✅ **Same** |
+| Purpose | Full regression | Quick smoke test |
+
+## 🎯 Philosophy
+
+**POC Branch = Main Branch - 23 Tests**
+
+Everything else remains identical:
+- Same commands (`node scripts/switch-endpoint.js`, etc.)
+- Same framework structure
+- Same utilities and configuration
+- Just fewer tests for faster validation
+
+## 📖 For More Details
+
+- Full documentation: [GETTING-STARTED.md](./GETTING-STARTED.md)
+- Main branch: [Main README](./README.md)
+- Endpoint switching: [ENDPOINT_SWITCHING.md](./ENDPOINT_SWITCHING.md)
 
 ## Switching Branches
 
