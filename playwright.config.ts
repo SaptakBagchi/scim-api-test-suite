@@ -53,7 +53,7 @@ export default defineConfig({
   projects: [
     {
       name: 'api-tests',
-      testMatch: ['**/*scim-api.spec.ts', '**/*api.spec.ts'], // Main API tests
+      testMatch: ['**/*scim-api.spec.ts', '**/*scim-api-poc.spec.ts', '**/*api.spec.ts'], // Main API tests
       use: {
         // API tests configuration
         baseURL: process.env.API_BASE_URL,
