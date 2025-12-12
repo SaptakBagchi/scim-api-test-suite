@@ -4,6 +4,8 @@
 
 This POC demonstrates a production-ready test automation framework for SCIM 2.0 API testing using Playwright and TypeScript. The framework provides automated validation of SCIM endpoints with comprehensive coverage of User and Group operations.
 
+**JIRA Card**: [CI-5351 - SCIM API Test Automation Framework POC](https://hyland.atlassian.net/browse/CI-5351)
+
 ---
 
 ## Key Highlights
@@ -19,15 +21,74 @@ This POC demonstrates a production-ready test automation framework for SCIM 2.0 
 ### 📊 **Test Coverage (POC Suite)**
 The POC includes 7 carefully selected tests demonstrating the framework's capabilities:
 
-| Test | Endpoint | Purpose |
-|------|----------|---------|
-| **Get Groups with Pagination** | GET /Groups?startIndex=1&count=2 | Validates pagination logic |
-| **Get All Users** | GET /Users | Retrieves and validates all users |
-| **Create User** | POST /Users | Creates new user with validation |
-| **Update User (PUT)** | PUT /Users/{id} | Full user update operation |
-| **Delete User** | DELETE /Users/{id} | User deletion with cleanup |
-| **Get Group by ID** | GET /Groups/1 | Single group retrieval |
-| **Get All Groups** | GET /Groups | All groups with metadata |
+| Test | Endpoint | Purpose | OBSCIM ID |
+|------|----------|---------|-----------|
+| **Create User (POST)** | POST /Users | Creates new user with validation (skipped in OEM) | OBSCIM-333 |
+| **Update User (PUT)** | PUT /Users/{id} | Full user update operation with DB creation | OBSCIM-333 |
+| **Update User (PATCH)** | PATCH /Users/{id} | Partial user update using PatchOp | OBSCIM-333 |
+| **Delete User (DELETE)** | DELETE /Users/{id} | User deletion with DB-created user | OBSCIM-333 |
+| **Create Group (POST)** | POST /Groups | Creates new group with validation | OBSCIM-343 |
+| **Update Group (PATCH)** | PATCH /Groups/{id} | Partial group update using PatchOp | OBSCIM-343 |
+| **Delete Group (DELETE)** | DELETE /Groups/{id} | Validates DELETE restriction (405) | OBSCIM-343 |
+
+**OBSCIM Coverage**: 2 requirements (OBSCIM-333 for Users, OBSCIM-343 for Groups)
+
+---
+
+## OBSCIM Test Case Mapping
+
+This POC demonstrates OBSCIM-aligned testing for SCIM 2.0 API endpoints. All tests reference their corresponding OBSCIM JIRA requirements.
+
+### **OBSCIM-333: User Endpoint Testing** (4 tests)
+
+| Test Name | HTTP Method | Endpoint | Status | OEM Behavior |
+|-----------|-------------|----------|--------|--------------|
+| Create User (POST) - OBSCIM-333 | POST | /Users | ⏭️ Skipped in OEM | Requires institution provisioning |
+| Update User (PUT) - OBSCIM-333 | PUT | /Users/{id} | ✅ Pass | Uses `createTestUserInDatabase()` |
+| Update User (PATCH) - OBSCIM-333 | PATCH | /Users/{id} | ✅ Pass | Uses `createTestUserInDatabase()` |
+| Delete User (DELETE) - OBSCIM-333 | DELETE | /Users/{id} | ✅ Pass | Uses `createTestUserInDatabase()` |
+
+**Key Implementation Details**:
+- **Database Integration**: PUT, PATCH, and DELETE tests automatically create users in `hsi.useraccount` table for OEM
+- **Request Format**: PATCH uses proper `op: "add"` with `value` object containing `emails` and `groups` arrays
+- **Validation**: Strict status code validation (200 for PUT/PATCH, 204 for DELETE)
+- **Cleanup**: Users are deleted after tests; database cleanup is automatic
+
+### **OBSCIM-343: Group Endpoint Testing** (3 tests)
+
+| Test Name | HTTP Method | Endpoint | Status | Notes |
+|-----------|-------------|----------|--------|-------|
+| Create Group (POST) - OBSCIM-343 | POST | /Groups | ✅ Pass | Creates group with unique displayName |
+| Update Group (PATCH) - OBSCIM-343 | PATCH | /Groups/{id} | ✅ Pass | Uses PatchOp with `replace` operation |
+| Delete Group (DELETE) - OBSCIM-343 | DELETE | /Groups/{id} | ✅ Pass (405) | Validates DELETE restriction |
+
+**Key Implementation Details**:
+- **Create Group**: Returns 201 with full group object including ID and metadata
+- **Update Group**: PATCH returns 200 or 204 (both acceptable per SCIM spec)
+- **Delete Group**: Returns 405 Method Not Allowed (restriction validated across all environments)
+
+### **Test Results by Environment**
+
+| Environment | Passed | Skipped | Failed | Total Duration |
+|-------------|--------|---------|--------|----------------|
+| **OEM API Server** | 6 | 1 | 0 | ~15 seconds |
+| **Non-OEM API Server** | 7 | 0 | 0 | ~12 seconds |
+| **OEM SCIM** | 6 | 1 | 0 | ~15 seconds |
+| **Non-OEM SCIM** | 7 | 0 | 0 | ~12 seconds |
+
+**Why Create User is Skipped in OEM**:
+- OEM environments require institution provisioning before API user creation
+- Test automatically skips with clear console output explaining the skip reason
+- All other operations work seamlessly with database-created users
+
+### **OBSCIM Requirements Coverage**
+
+For complete OBSCIM coverage, see the **develop branch** which includes:
+- **14 OBSCIM requirements automated** (82% coverage)
+- **35 comprehensive tests** covering all SCIM endpoints
+- Additional requirements: OBSCIM-331 (ResourceTypes), OBSCIM-334 (Schemas), OBSCIM-342 (ServiceProviderConfig), and more
+
+**POC Branch Focus**: Demonstrates core User and Group CRUD operations with proper OEM support
 
 ---
 
@@ -82,26 +143,42 @@ API_BASE_URL=https://your-domain.net
 ## Test Results
 
 ### **Execution Summary**
-- ✅ **7 tests executed** in 9.2 seconds
-- ✅ **100% pass rate**
-- ✅ **Zero failures**
-- ✅ **Clean ASCII output** (Windows PowerShell compatible)
+- ✅ **7 tests executed** in ~15 seconds (OEM) or ~12 seconds (Non-OEM)
+- ✅ **6 passed, 1 skipped** in OEM environments
+- ✅ **7 passed** in Non-OEM environments
+- ✅ **Zero failures** across all environments
+- ✅ **Enhanced logging** with emojis for better readability
 
-### **Sample Test Output**
+### **Sample Test Output (OEM API Server)**
 ```
-[WEB] GET Request: /ApiServer/onbase/SCIM/v2/Groups?startIndex=1&count=2
-[NOTE] Description: Retrieve groups with pagination (start: 1, count: 2)
+Running 7 tests using 1 worker
+
+[START] OBSCIM-333: Testing Users PUT (update) endpoint
+🏢 OEM Mode: Creating test user in database for PUT test...
+📝 Creating user "PUTTEST_1765536116625" in database with institutionId: 103
+⏳ Creating database connection pool...
+✅ Database connection pool successfully created and connected
+📋 Available columns in hsi.useraccount: usernum, username, institution...
+✅ Created test user in database: PUTTEST_1765536116625 (ID: 264132)
+🔍 Searching for created user via API...
+✅ Found created user in API: PUTTEST_1765536116625 (ID: 264132)
+[WEB] PUT Request: /ApiServer/onbase/SCIM/v2/Users/264132
 [OK] Response status validation passed (200)
-[OK] Valid JSON response received
-[OK] SCIM ListResponse schema present
-[OK] Total results: 265
-[OK] Items per page: 2 (requested: 2)
-[OK] Start index: 1 (requested: 1)
-[OK] Resources array contains 2 groups (max: 2)
-[OK] Group 1: MANAGER (ID: 1)
-[OK] Group 2: ADMIN CONFIG (ID: 10)
-[OK] Pagination logic validated
-[DONE] Get Groups with Pagination test completed successfully!
+✅ SCIM User schema present
+✅ User ID matches: 264132
+✅ Username: PUTTEST_1765536116625
+[DONE] Update User (PUT) test completed successfully!
+
+  ✓ Update User (PUT) - OBSCIM-333 (8.1s)
+  ✓ Update User (PATCH) - OBSCIM-333 (1.1s)
+  ✓ Delete User (DELETE) - OBSCIM-333 (1.3s)
+  ✓ Create Group (POST) - OBSCIM-343 (291ms)
+  ✓ Update Group (PATCH) - OBSCIM-343 (907ms)
+  ✓ Delete Group (DELETE) - OBSCIM-343 (256ms)
+  - Create User (POST) - OBSCIM-333 (skipped in OEM)
+
+  1 skipped
+  6 passed (15.1s)
 ```
 
 ---
@@ -154,11 +231,11 @@ cp .env.example .env
 
 #### **Quick Start (Current Configuration)**
 ```bash
-# Run all POC tests with current settings
-npx playwright test tests/scim-api-poc.spec.ts
+# Run all POC tests with current settings (sequential execution)
+npx playwright test tests/scim-api-poc.spec.ts --workers=1
 
 # Run specific test
-npx playwright test --grep "Get Groups with Pagination"
+npx playwright test --grep "Create User" --workers=1
 
 # View HTML report
 npx playwright show-report
@@ -166,18 +243,23 @@ npx playwright show-report
 
 #### **Environment-Specific Execution**
 ```powershell
-# Non-OEM API Server (Current Test)
-$env:OEM = "false"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --reporter=html
+# Non-OEM API Server
+$env:OEM = "false"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --workers=1 --reporter=html
 
 # Non-OEM SCIM
-$env:OEM = "false"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --reporter=html
+$env:OEM = "false"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --workers=1 --reporter=html
 
-# OEM API Server
-$env:OEM = "true"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --reporter=html
+# OEM API Server (Recommended for OEM environments)
+$env:OEM = "true"; $env:ENDPOINT_TYPE = "apiserver"; npx playwright test tests/scim-api-poc.spec.ts --workers=1 --reporter=html
 
 # OEM SCIM
-$env:OEM = "true"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --reporter=line
+$env:OEM = "true"; $env:ENDPOINT_TYPE = "scim"; npx playwright test tests/scim-api-poc.spec.ts --workers=1 --reporter=line
 ```
+
+**Note**: `--workers=1` ensures sequential test execution, which is important for:
+- Database operations in OEM environments
+- Avoiding resource conflicts during user/group creation
+- Maintaining test data consistency
 
 ### **Switch Environments (Using Scripts)**
 ```bash
@@ -357,15 +439,32 @@ if (isOemEnvironment()) {
 
 This POC successfully demonstrates a robust, scalable test automation framework for SCIM API testing. The framework is:
 
-✅ **Production-ready** with comprehensive validation utilities
-✅ **Well-documented** with extensive guides and examples
-✅ **Maintainable** with clean, modular architecture
-✅ **Flexible** supporting multiple environments and configurations
-✅ **Proven** with 100% pass rate on 7 POC tests
-✅ **Scalable** ready for expansion in develop branch
+✅ **Production-ready** with comprehensive validation utilities  
+✅ **Well-documented** with extensive guides and examples  
+✅ **Maintainable** with clean, modular architecture  
+✅ **Flexible** supporting multiple environments and configurations  
+✅ **Proven** with 6/7 tests passing in OEM, 7/7 passing in Non-OEM  
+✅ **Scalable** ready for expansion in develop branch  
+✅ **OBSCIM-Compliant** all tests aligned with JIRA requirements  
+✅ **OEM-Compatible** automatic database integration for test data management  
 
-**Status**: ✅ POC Complete - Framework Ready for Test Case Development
+**Status**: ✅ POC Complete - Framework Fully Aligned with Develop Branch
+
+### **Key Achievements**
+- ✅ Framework successfully validates User and Group CRUD operations
+- ✅ Automatic OEM detection and database integration working perfectly
+- ✅ All tests reference their OBSCIM JIRA cards (OBSCIM-333, OBSCIM-343)
+- ✅ Sequential execution (`--workers=1`) ensures test data consistency
+- ✅ POC branch is a perfect replica of develop (just fewer tests)
+
+### **Next Steps**
+1. **For Complete Coverage**: Switch to `develop` branch (35 tests, 14 OBSCIM requirements)
+2. **For Production Use**: Deploy framework to CI/CD pipeline
+3. **For Expansion**: Add more tests from develop to POC as needed
 
 ---
 
-*Last Updated: December 12, 2025*
+**JIRA Card**: [CI-5351](https://hyland.atlassian.net/browse/CI-5351)  
+**Repository**: scim-api-test-suite (GitHub)  
+**Branch**: poc  
+*Last Updated: January 12, 2025*
