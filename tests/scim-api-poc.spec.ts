@@ -29,18 +29,22 @@ function logTestResult(testInfo: any, operation: string, endpoint: string, expec
 }
 
 /**
- * POC - SCIM API Tests
+ * POC - SCIM API Tests with OBSCIM Alignment
  * This is a showcase suite with 7 tests selected from the main branch (28 tests total)
  * Tests are exact copies from main branch, not simplified versions
  * 
+ * OBSCIM Coverage:
+ * - OBSCIM-333 (User CRUD): 4 tests - Get All Users, Create User, Update User (PUT), Delete User
+ * - OBSCIM-343 (Group Operations): 3 tests - Get Group by ID, Get All Groups, Get Groups with Pagination
+ * 
  * Selected Tests:
- * - Test #3: Get All Users
- * - Test #6: Create User
- * - Test #10: Update User (PUT)
- * - Test #12: Delete User (DELETE)
- * - Test #14: Get Group with ID 1
- * - Test #13: Get All Groups
- * - Test #15: Get Groups with Pagination
+ * - Test #3: Get All Users - OBSCIM-333
+ * - Test #6: Create User - OBSCIM-333
+ * - Test #10: Update User (PUT) - OBSCIM-333
+ * - Test #12: Delete User (DELETE) - OBSCIM-333
+ * - Test #14: Get Group with ID 1 - OBSCIM-343
+ * - Test #13: Get All Groups - OBSCIM-343
+ * - Test #15: Get Groups with Pagination - OBSCIM-343
  */
 test.describe('SCIM API Tests', () => {
   // Configure to run tests sequentially to avoid rate limiting
@@ -63,11 +67,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 3: Get All Users
    * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Users
    * Purpose: Retrieve all users in the system
    */
-  test('Get All Users', async ({ request }, testInfo) => {
+  test('Get All Users - OBSCIM-333', async ({ request }, testInfo) => {
     const endpoint = ApiEndpoints.users();
     logApiRequest('GET', endpoint, 'Retrieve all users in the system');
     
@@ -148,11 +153,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 6: Create User
    * Endpoint: POST {{IdSBaseURI}}/obscim/v2/Users
    * Purpose: Create a new user in the system
    */
-  test('Create User', async ({ request }, testInfo) => {
+  test('Create User - OBSCIM-333', async ({ request }, testInfo) => {
     // Skip this test in OEM environments due to known limitation
     if (isOemEnvironment()) {
       test.skip();
@@ -262,11 +268,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 10: Update User (PUT)
    * Endpoint: PUT {{IdSBaseURI}}/obscim/v2/Users/{id}
    * Purpose: Completely replace an existing user using PUT method
    */
-  test('Update User (PUT)', async ({ request }, testInfo) => {
+  test('Update User (PUT) - OBSCIM-333', async ({ request }, testInfo) => {
     // First, create a user to update
     const createEndpoint = ApiEndpoints.users();
     const uniqueUserName = `putUser_${Date.now()}`;
@@ -428,11 +435,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 12: Delete User (DELETE)
    * Endpoint: DELETE {{IdSBaseURI}}/obscim/v2/Users/{id}
    * Purpose: Delete an existing user from the system
    */
-  test('Delete User (DELETE)', async ({ request }, testInfo) => {
+  test('Delete User (DELETE) - OBSCIM-333', async ({ request }, testInfo) => {
     let userIdToDelete: string;
     let userName: string;
     
@@ -549,11 +557,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 14: Get Group with ID 1
    * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Groups/1
    * Purpose: Retrieve a specific group (MANAGER group)
    */
-  test('Get Group with ID 1', async ({ request }, testInfo) => {
+  test('Get Group with ID 1 - OBSCIM-343', async ({ request }, testInfo) => {
     const groupId = '1'; // MANAGER group
     const endpoint = `${ApiEndpoints.groups()}/${groupId}`;
     logApiRequest('GET', endpoint, `Retrieve group ${groupId}`);
@@ -605,11 +614,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 13: Get All Groups
    * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Groups
    * Purpose: Retrieve all groups in the system
    */
-  test('Get All Groups', async ({ request }, testInfo) => {
+  test('Get All Groups - OBSCIM-343', async ({ request }, testInfo) => {
     const endpoint = ApiEndpoints.groups();
     logApiRequest('GET', endpoint, 'Retrieve all groups');
     
@@ -665,11 +675,12 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 15: Get Groups with Pagination
    * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Groups?startIndex=1&count=2
    * Purpose: Test paginated retrieval of groups
    */
-  test('Get Groups with Pagination', async ({ request }, testInfo) => {
+  test('Get Groups with Pagination - OBSCIM-343', async ({ request }, testInfo) => {
     const startIndex = 1;
     const count = 2;
     const endpoint = `${ApiEndpoints.groups()}?startIndex=${startIndex}&count=${count}`;
