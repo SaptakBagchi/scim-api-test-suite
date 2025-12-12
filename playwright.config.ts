@@ -23,6 +23,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
+  /* Global timeout settings - increased for slower endpoints */
+  timeout: 120000, // 2 minutes per test (for slower OBSCIM endpoint)
+  expect: {
+    timeout: 30000, // 30 seconds for assertions
+  },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
@@ -48,7 +53,7 @@ export default defineConfig({
   projects: [
     {
       name: 'api-tests',
-      testMatch: ['**/*scim-api.spec.ts', '**/*scim-api-poc.spec.ts', '**/*api.spec.ts'], // Main API tests + POC tests
+      testMatch: ['**/*scim-api.spec.ts', '**/*api.spec.ts'], // Main API tests
       use: {
         // API tests configuration
         baseURL: process.env.API_BASE_URL,

@@ -26,7 +26,7 @@ const environmentConfigs = {
     password: 'wstinol',
     apiBaseUrl: 'https://rdv-009275.hylandqa.net',
     oauthBaseUrl: 'https://rdv-009275.hylandqa.net/identityservice',
-    institutionId: '102' // Default institution ID for OEM searches
+    institutionId: '103' // Default institution ID for OEM searches
   },
   nonOem: {
     server: 'RDV-010318\\LOCALSQLSERVER22',
@@ -49,9 +49,9 @@ function getDbConfigForEnvironment(): EnvironmentDbConfig {
   
   const selectedConfig = isOem ? environmentConfigs.oem : environmentConfigs.nonOem;
   
-  console.log(`[SETUP] Environment: ${isOem ? 'OEM (rdv-009275)' : 'Non-OEM (rdv-010318)'}`);
-  console.log(`[URL] API URL: ${selectedConfig.apiBaseUrl}`);
-  console.log(`[DB] Database: ${selectedConfig.server}\\${selectedConfig.database}`);
+  console.log(`🔧 Environment: ${isOem ? 'OEM (rdv-009275)' : 'Non-OEM (rdv-010318)'}`);
+  console.log(`📍 API URL: ${selectedConfig.apiBaseUrl}`);
+  console.log(`ðŸ—„ï¸  Database: ${selectedConfig.server}\\${selectedConfig.database}`);
   
   // Set the API_BASE_URL and OAUTH_BASE_URL for the test context
   process.env.API_BASE_URL = selectedConfig.apiBaseUrl;
@@ -92,16 +92,16 @@ let poolPromise: Promise<sql.ConnectionPool> | null = null;
  */
 async function getPool(): Promise<sql.ConnectionPool> {
   if (!poolPromise) {
-    console.log(`[DB] Creating database connection pool...`);
+    console.log(`⏳ Creating database connection pool...`);
     console.log(`   Server: ${dbConfig.server}`);
     console.log(`   Database: ${dbConfig.database}`);
     
     poolPromise = new sql.ConnectionPool(dbConfig)
       .connect()
       .then(pool => {
-        console.log('[OK] Database connection pool successfully created and connected');
+        console.log('✅ Database connection pool successfully created and connected');
         pool.on('error', err => {
-          console.error('[FAIL] Database pool error:', err.message);
+          console.error('❌ Database pool error:', err.message);
           poolPromise = null;
         });
         return pool;
@@ -340,6 +340,43 @@ export function getInstitutionId(): string | undefined {
   return isOemEnvironment() ? envDbConfig.institutionId : undefined;
 }
 
+// Cache for column information
+let cachedColumnInfo: { columns: string[], identityColumn: string | null } | null = null;
+
+/**
+ * Get column information from hsi.useraccount table
+ * @returns Object with column names and identity info
+ */
+export async function getUserAccountColumns(): Promise<{ columns: string[], identityColumn: string | null }> {
+  // Return cached info if available
+  if (cachedColumnInfo) {
+    return cachedColumnInfo;
+  }
+  
+  const pool = await getPool();
+  
+  // Get columns and identity info in a single query for efficiency
+  const result = await pool.request().query(`
+    SELECT 
+      c.COLUMN_NAME,
+      COLUMNPROPERTY(OBJECT_ID('hsi.useraccount'), c.COLUMN_NAME, 'IsIdentity') as IsIdentity
+    FROM INFORMATION_SCHEMA.COLUMNS c
+    WHERE c.TABLE_SCHEMA = 'hsi' 
+      AND c.TABLE_NAME = 'useraccount'
+    ORDER BY c.ORDINAL_POSITION
+  `);
+  
+  const columns = result.recordset.map((row: any) => row.COLUMN_NAME);
+  const identityColumn = result.recordset.find((row: any) => row.IsIdentity === 1)?.COLUMN_NAME || null;
+  
+  console.log(`📋 Available columns in hsi.useraccount: ${columns.slice(0, 10).join(', ')}...`);
+  console.log(`🔑 Identity column: ${identityColumn || 'None (usernum may need explicit value)'}`);
+  
+  // Cache the result
+  cachedColumnInfo = { columns, identityColumn };
+  return cachedColumnInfo;
+}
+
 /**
  * Create a test user directly in the database for DELETE testing
  * @param username - Username for the test user
@@ -350,35 +387,61 @@ export async function createTestUserInDatabase(username: string, institutionId?:
   return retryOperation(async () => {
     const pool = await getPool();
     
-    // Generate a unique numeric ID for obuniqueid (based on timestamp)
-    const obUniqueId = Date.now();
+    // First, get the actual column names from the database
+    const { columns, identityColumn } = await getUserAccountColumns();
     
-    const result = await pool.request()
+    // Find the correct column name (check for 'institution' or 'institutionid')
+    const institutionIdColumn = columns.find((col: string) => col.toLowerCase() === 'institutionid' || col.toLowerCase() === 'institution');
+    const usernameColumn = columns.find((col: string) => col.toLowerCase() === 'username');
+    const realnameColumn = columns.find((col: string) => col.toLowerCase() === 'realname');
+    const emailColumn = columns.find((col: string) => col.toLowerCase() === 'emailaddress');
+    const disableLoginColumn = columns.find((col: string) => col.toLowerCase() === 'disablelogin');
+    const obUniqueIdColumn = columns.find((col: string) => col.toLowerCase() === 'obuniqueid');
+    const userNumColumn = columns.find((col: string) => col.toLowerCase() === 'usernum');
+    
+    console.log(`📝 Using column names: username=${usernameColumn}, institution=${institutionIdColumn}, identity=${identityColumn}`);
+    
+    // Generate unique IDs
+    const obUniqueId = Date.now();
+    const generatedUserNum = Math.floor(Math.random() * 900000) + 100000; // Generate random 6-digit number
+    
+    const request = pool.request()
       .input('username', sql.NVarChar, username)
       .input('realname', sql.NVarChar, `Test User ${username}`)
       .input('emailaddress', sql.NVarChar, `${username}@test.com`)
       .input('disablelogin', sql.Bit, 0)
-      .input('obuniqueid', sql.BigInt, obUniqueId)
-      .query(`
-        INSERT INTO hsi.useraccount (
-          username,
-          realname,
-          emailaddress,
-          disablelogin,
-          obuniqueid
-        )
-        OUTPUT INSERTED.usernum
-        VALUES (
-          @username,
-          @realname,
-          @emailaddress,
-          @disablelogin,
-          @obuniqueid
-        )
-      `);
+      .input('obuniqueid', sql.BigInt, obUniqueId);
     
-    const userNum = result.recordset[0].usernum;
-    console.log(`[OK] Created test user in database: ${username} (ID: ${userNum}, InstitutionId: ${institutionId || 'N/A'})`);
+    // Build INSERT query dynamically based on available columns
+    let insertColumns = [usernameColumn, realnameColumn, emailColumn, disableLoginColumn, obUniqueIdColumn].filter(Boolean);
+    let insertValues = ['@username', '@realname', '@emailaddress', '@disablelogin', '@obuniqueid'];
+    
+    // Add usernum if it's not an identity column
+    if (userNumColumn && !identityColumn) {
+      request.input('usernum', sql.Int, generatedUserNum);
+      insertColumns.unshift(userNumColumn); // Add at beginning
+      insertValues.unshift('@usernum');
+    }
+    
+    // Add institutionId for OEM environments if column exists
+    if (institutionId && institutionIdColumn) {
+      request.input('institutionId', sql.Int, parseInt(institutionId));
+      insertColumns.push(institutionIdColumn);
+      insertValues.push('@institutionId');
+    }
+    
+    const result = await request.query(`
+      INSERT INTO hsi.useraccount (
+        ${insertColumns.join(', ')}
+      )
+      OUTPUT INSERTED.${userNumColumn}
+      VALUES (
+        ${insertValues.join(', ')}
+      )
+    `);
+    
+    const userNum = result.recordset[0][userNumColumn!];
+    console.log(`✅ Created test user in database: ${username} (ID: ${userNum}, InstitutionId: ${institutionId || 'N/A'})`);
     return userNum;
   });
 }
@@ -401,7 +464,7 @@ export async function deleteTestUserFromDatabase(userNum: number): Promise<void>
       .input('userNum', sql.BigInt, userNum)
       .query(`DELETE FROM hsi.useraccount WHERE usernum = @userNum`);
     
-    console.log(`[CLEANUP] Cleaned up test user from database (ID: ${userNum})`);
+    console.log(`🗑️  Cleaned up test user from database (ID: ${userNum})`);
   });
 }
 
