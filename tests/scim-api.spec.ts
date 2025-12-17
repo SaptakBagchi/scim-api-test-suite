@@ -29,6 +29,54 @@ function logTestResult(testInfo: any, operation: string, endpoint: string, expec
 }
 
 /**
+ * Helper function to create SCIM User request body
+ * @param options - Options for customizing the user request
+ */
+interface CreateUserOptions {
+  userName: string;
+  formattedName?: string;
+  active?: boolean;
+  groupId?: string;
+  email?: string;
+  password?: string;
+}
+
+function createUserRequestBody(options: CreateUserOptions): any {
+  const {
+    userName,
+    formattedName = `Test User ${Date.now()}`,
+    active = true,
+    groupId = "1",
+    email,
+    password
+  } = options;
+
+  const requestBody: any = {
+    schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    active,
+    userName,
+    name: {
+      formatted: formattedName
+    },
+    groups: [
+      {
+        value: groupId
+      }
+    ]
+  };
+
+  if (email) {
+    requestBody.email = email;
+  }
+
+  if (password) {
+    requestBody.password = password;
+  }
+
+  return requestBody;
+}
+
+/**
  * SCIM API Tests - Identity Management API Testing
  * Prerequisites: OAuth2 token generation for authentication
  * Main Test Cases: SCIM v2 API endpoints testing
@@ -543,21 +591,10 @@ test.describe('SCIM API Tests', () => {
     
     const endpoint = ApiEndpoints.users();
     const uniqueUserName = `testUser_${Date.now()}`;
-    const requestBody = {
-      schemas: [
-        "urn:ietf:params:scim:schemas:core:2.0:User"
-      ],
-      active: true,
+    const requestBody = createUserRequestBody({
       userName: uniqueUserName,
-      name: {
-        formatted: `Test User ${Date.now()}`
-      },
-      groups: [
-        {
-          value: "1"
-        }
-      ]
-    };
+      formattedName: `Test User ${Date.now()}`
+    });
     
     logApiRequest('POST', endpoint, `Create new user: ${uniqueUserName}`);
     console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
@@ -639,6 +676,154 @@ test.describe('SCIM API Tests', () => {
     console.log(`🆔 Created user with ID: ${createdUserId} for potential cleanup`);
     
     console.log('🎉 Create User test completed successfully!');
+  });
+
+  /**
+   * DEFECT TEST: Verify that user creation fails completely when alphabetic group value is provided
+   * Test Case: Create User with Alphabetic Group Value (Negative Test)
+   * Endpoint: POST {{IdSBaseURI}}/obscim/v2/Users
+   * Purpose: Validate that when alphabetic group value is provided, the operation fails completely
+   *          and NO user is created in the database (defect verification)
+   * 
+   * Expected Behavior:
+   * - API should return 500 error with "Input string was not in a correct format"
+   * - User should NOT be created in database (OnBase hsi.useraccount table)
+   * 
+   * Current Defect:
+   * - API returns 500 error correctly
+   * - BUT user is incorrectly created in database despite the error
+   */
+  /**
+   * OBSCIM-469: Verify user creation fails with 400 error for invalid group values and does not create user in database
+   * 
+   * Related Bug: OBSCIM-311
+   * Bug Description: 
+   * When invalid group values (alphabetic/alphanumeric) were provided in user creation,
+   * the API returned 500 Internal Server Error BUT still created the user in the database.
+   * 
+   * Expected Behavior:
+   * - API should return 400 Bad Request for invalid group values
+   * - User should NOT be created in the database when validation fails
+   * 
+   * Test Coverage:
+   * 1. Alphabetic group value (e.g., "MANAGER")
+   * 2. Alphanumeric group value (e.g., "GROUP123")
+   * 3. Special characters in group value (e.g., "GRP@123#")
+   * 4. Empty group value
+   * 5. Multiple groups with invalid values
+   * 6. Mixed valid and invalid group values
+   */
+
+  test('OBSCIM-469: Verify user creation fails with 400 error for invalid group values and does not create user in database', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-469: Verify user creation fails with 400 error for invalid group values');
+    console.log('🐛 Related Bug (OBSCIM-311): Invalid group values returned 500 and STILL created user in database');
+    console.log('✅ Expected: Return 400 and NOT create user');
+    
+    // Skip in OEM environments as they already skip user creation
+    if (isOemEnvironment()) {
+      test.skip();
+      console.log('⏭️  Skipping in OEM environment (user creation already restricted)');
+      return;
+    }
+
+    const endpoint = ApiEndpoints.users();
+
+    // Helper function to test invalid group value and verify no user creation
+    async function testInvalidGroupValue(groupValue: any, scenario: string): Promise<void> {
+      const uniqueUserName = `TEST_${scenario}_${Date.now()}`;
+      const requestBody = {
+        schemas: ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        active: true,
+        userName: uniqueUserName,
+        name: {
+          formatted: `${scenario} test user`
+        },
+        groups: Array.isArray(groupValue) ? groupValue : [{ value: groupValue }]
+      };
+
+      console.log(`\n📤 Testing scenario: ${scenario}`);
+      console.log(`   Group value: ${JSON.stringify(groupValue)}`);
+
+      const response = await request.post(`${apiContext.baseUrl}${endpoint}`, {
+        headers: {
+          ...apiContext.headers,
+          'Content-Type': 'application/scim+json'
+        },
+        data: requestBody,
+        timeout: 90000
+      });
+
+      // Validate 400 error (not 500)
+      expect(response.status()).toBe(400);
+      console.log(`   ✅ Returns 400 Bad Request (BUG FIXED - was 500)`);
+
+      // Validate error response
+      const responseBody = await response.json();
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:Error');
+      expect(responseBody.status).toBe('400');
+      expect(responseBody.detail).toContain('Input string was not in a correct format');
+      console.log(`   ✅ Error response structure valid`);
+
+      // Critical: Verify user NOT created in database
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const searchResponse = await request.get(
+        `${apiContext.baseUrl}${ApiEndpoints.users()}?filter=userName eq "${uniqueUserName}"`,
+        { headers: apiContext.headers, timeout: 90000 }
+      );
+
+      if (searchResponse.status() === 200) {
+        const searchBody = await searchResponse.json();
+        if (searchBody.totalResults > 0) {
+          console.log(`   ❌ BUG DETECTED: User created despite error!`);
+          console.log(`   ❌ Found: ${searchBody.Resources[0].userName} (ID: ${searchBody.Resources[0].id})`);
+        }
+        expect(searchBody.totalResults).toBe(0);
+        console.log(`   ✅ User NOT created in database (BUG FIXED)`);
+      }
+    }
+
+    // Scenario 1: Alphabetic group value
+    await test.step('Scenario 1: Alphabetic group value ("MANAGER")', async () => {
+      await testInvalidGroupValue("MANAGER", "ALPHABETIC");
+    });
+
+    // Scenario 2: Alphanumeric group value
+    await test.step('Scenario 2: Alphanumeric group value ("GROUP123")', async () => {
+      await testInvalidGroupValue("GROUP123", "ALPHANUMERIC");
+    });
+
+    // Scenario 3: Special characters in group value
+    await test.step('Scenario 3: Special characters ("GRP@123#")', async () => {
+      await testInvalidGroupValue("GRP@123#", "SPECIAL_CHARS");
+    });
+
+    // Scenario 4: Empty group value
+    await test.step('Scenario 4: Empty group value', async () => {
+      await testInvalidGroupValue("", "EMPTY");
+    });
+
+    // Scenario 5: Multiple invalid group values
+    await test.step('Scenario 5: Multiple invalid group values', async () => {
+      await testInvalidGroupValue([
+        { value: "MANAGER" },
+        { value: "ADMIN" },
+        { value: "USER123" }
+      ], "MULTIPLE");
+    });
+
+    // Scenario 6: Mixed valid and invalid group values
+    await test.step('Scenario 6: Mixed valid and invalid group values', async () => {
+      console.log(`   ⚠️  Critical: Tests transaction rollback - no partial user creation`);
+      await testInvalidGroupValue([
+        { value: "1" },        // Valid
+        { value: "MANAGER" }   // Invalid
+      ], "MIXED");
+    });
+
+    console.log('\n[DONE] OBSCIM-469: All scenarios validated');
+    console.log('📋 Summary: API correctly returns 400 and does NOT create users with invalid group values');
+    console.log('✅ 6/6 scenarios passed: alphabetic, alphanumeric, special chars, empty, multiple, mixed');
+    console.log('🐛 Bug OBSCIM-311 is FIXED');
   });
 
   /**
@@ -993,21 +1178,10 @@ test.describe('SCIM API Tests', () => {
       // Non-OEM: Create a user via API to update
       const createEndpoint = ApiEndpoints.users();
       const uniqueUserName = `putUser_${Date.now()}`;
-      const createRequestBody = {
-        schemas: [
-          "urn:ietf:params:scim:schemas:core:2.0:User"
-        ],
-        active: true,
+      const createRequestBody = createUserRequestBody({
         userName: uniqueUserName,
-        name: {
-          formatted: `PUT Test User ${Date.now()}`
-        },
-        groups: [
-          {
-            value: "1"
-          }
-        ]
-      };
+        formattedName: `PUT Test User ${Date.now()}`
+      });
       
       console.log('🔧 Creating user via API for PUT test...');
       const createResponse = await request.post(`${apiContext.baseUrl}${createEndpoint}`, {
