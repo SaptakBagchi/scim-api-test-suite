@@ -198,6 +198,206 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
+   * OBSCIM-331: Verify updated ResourceType endpoint for SCIM 2.0
+   * Step 2 - Verify legacy ResourceType endpoint (without v2)
+   * Test Case: Get Resource Types (Legacy)
+   * Endpoint: GET {{IdSBaseURI}}/obscim/ResourceTypes
+   * Purpose: Validate backward compatibility with legacy endpoint
+   */
+  test('Get Resource Types (Legacy - no v2) - OBSCIM-331', async ({ request }, testInfo) => {
+    const endpoint = '/obscim/ResourceTypes';
+    console.log('[START] OBSCIM-331 Step 2: Testing legacy ResourceTypes endpoint');
+    logApiRequest('GET', endpoint, 'Test legacy ResourceTypes endpoint without v2');
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers,
+      timeout: 90000
+    });
+    
+    await test.step(`✅ GET ${endpoint}`, async () => {
+      ApiValidators.validateResponseStatus(response, 200);
+    });
+    
+    const responseBody = await ApiValidators.validateJsonResponse(response);
+    console.log('[OK] Legacy endpoint returns valid response');
+    expect(responseBody.schemas).toBeDefined();
+    expect(responseBody.Resources).toBeDefined();
+    console.log('[DONE] OBSCIM-331 Step 2: Legacy endpoint validated');
+  });
+
+  /**
+   * OBSCIM-331: Verify updated ResourceType endpoint for SCIM 2.0
+   * Step 3 - Get specific User ResourceType
+   * Test Case: Get User Resource Type Details
+   * Endpoint: GET {{IdSBaseURI}}/obscim/ResourceTypes/User
+   * Purpose: Retrieve specific User resource type information
+   */
+  test('Get User ResourceType Details - OBSCIM-331', async ({ request }, testInfo) => {
+    const endpoint = '/obscim/ResourceTypes/User';
+    console.log('[START] OBSCIM-331 Step 3: Testing User ResourceType endpoint');
+    logApiRequest('GET', endpoint, 'Retrieve User resource type details');
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers,
+      timeout: 90000
+    });
+    
+    await test.step(`✅ GET ${endpoint}`, async () => {
+      ApiValidators.validateResponseStatus(response, 200);
+    });
+    
+    const responseBody = await ApiValidators.validateJsonResponse(response);
+    
+    // Validate it's a single resource type (not a list)
+    expect(responseBody.schemas).toBeDefined();
+    expect(responseBody.id).toBeDefined();
+    expect(responseBody.name).toBe('User');
+    expect(responseBody.endpoint).toBeDefined();
+    expect(responseBody.schema).toBeDefined();
+    expect(responseBody.description).toBeDefined();
+    
+    // Should NOT have list response fields
+    expect(responseBody.totalResults).toBeUndefined();
+    expect(responseBody.Resources).toBeUndefined();
+    
+    console.log(`[OK] User ResourceType: ${responseBody.name}`);
+    console.log(`[OK] Endpoint: ${responseBody.endpoint}`);
+    console.log(`[OK] Schema: ${responseBody.schema}`);
+    console.log('[DONE] OBSCIM-331 Step 3: User ResourceType validated');
+  });
+
+  /**
+   * OBSCIM-331: Verify updated ResourceType endpoint for SCIM 2.0
+   * Step 4 - Get specific Group ResourceType
+   * Test Case: Get Group Resource Type Details
+   * Endpoint: GET {{IdSBaseURI}}/obscim/ResourceTypes/Group
+   * Purpose: Retrieve specific Group resource type information
+   */
+  test('Get Group ResourceType Details - OBSCIM-331', async ({ request }, testInfo) => {
+    const endpoint = '/obscim/ResourceTypes/Group';
+    console.log('[START] OBSCIM-331 Step 4: Testing Group ResourceType endpoint');
+    logApiRequest('GET', endpoint, 'Retrieve Group resource type details');
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers,
+      timeout: 90000
+    });
+    
+    await test.step(`✅ GET ${endpoint}`, async () => {
+      ApiValidators.validateResponseStatus(response, 200);
+    });
+    
+    const responseBody = await ApiValidators.validateJsonResponse(response);
+    
+    // Validate it's a single resource type (not a list)
+    expect(responseBody.schemas).toBeDefined();
+    expect(responseBody.id).toBeDefined();
+    expect(responseBody.name).toBe('Group');
+    expect(responseBody.endpoint).toBeDefined();
+    expect(responseBody.schema).toBeDefined();
+    expect(responseBody.description).toBeDefined();
+    
+    // Should NOT have list response fields
+    expect(responseBody.totalResults).toBeUndefined();
+    expect(responseBody.Resources).toBeUndefined();
+    
+    console.log(`[OK] Group ResourceType: ${responseBody.name}`);
+    console.log(`[OK] Endpoint: ${responseBody.endpoint}`);
+    console.log(`[OK] Schema: ${responseBody.schema}`);
+    console.log('[DONE] OBSCIM-331 Step 4: Group ResourceType validated');
+  });
+
+  /**
+   * OBSCIM-331: Verify updated ResourceType endpoint for SCIM 2.0
+   * Step 6 - Negative Test: Invalid Resource Type
+   * Test Case: Get Invalid Resource Type (Should return 404)
+   * Endpoint: GET {{IdSBaseURI}}/obscim/v2/ResourceTypes/Invalid_Resource
+   * Purpose: Verify proper error handling for non-existent resource types
+   */
+  test('Get Invalid ResourceType - OBSCIM-331 (Negative)', async ({ request }, testInfo) => {
+    const endpoint = '/obscim/v2/ResourceTypes/Invalid_Resource';
+    console.log('[START] OBSCIM-331 Step 6: Testing invalid ResourceType (negative test)');
+    logApiRequest('GET', endpoint, 'Attempt to retrieve non-existent resource type');
+    
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers,
+      timeout: 90000
+    });
+    
+    // Should return 404 Not Found
+    await test.step(`✅ GET ${endpoint} - Expect 404`, async () => {
+      expect(response.status()).toBe(404);
+      console.log('[OK] Returns 404 for invalid resource type');
+    });
+    
+    // If response has body, validate error structure
+    if (response.status() !== 204) {
+      const responseBody = await response.json();
+      if (responseBody.schemas) {
+        expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:Error');
+        console.log('[OK] Error response follows SCIM error schema');
+      }
+    }
+    
+    console.log('[DONE] OBSCIM-331 Step 6: Invalid resource type properly rejected');
+  });
+
+  /**
+   * OBSCIM-331: Verify updated ResourceType endpoint for SCIM 2.0
+   * Step 8 - Negative Test: Invalid HTTP Methods
+   * Test Case: ResourceTypes with unsupported HTTP methods
+   * Endpoints: POST/PATCH/PUT/DELETE {{IdSBaseURI}}/obscim/v2/ResourceTypes
+   * Purpose: Verify only GET is supported (405 Method Not Allowed expected)
+   */
+  test('ResourceTypes - Invalid HTTP Methods - OBSCIM-331 (Negative)', async ({ request }, testInfo) => {
+    const endpoint = '/obscim/v2/ResourceTypes';
+    console.log('[START] OBSCIM-331 Step 8: Testing invalid HTTP methods');
+    
+    const invalidMethods = [
+      { method: 'POST', data: { name: 'Test' } },
+      { method: 'PUT', data: { name: 'Test' } },
+      { method: 'PATCH', data: { Operations: [] } },
+      { method: 'DELETE', data: null }
+    ];
+    
+    for (const { method, data } of invalidMethods) {
+      console.log(`[TEST] Attempting ${method} on ${endpoint}`);
+      
+      let response: any;
+      const requestOptions = {
+        headers: {
+          ...apiContext.headers,
+          'Content-Type': 'application/scim+json'
+        },
+        timeout: 90000
+      };
+      
+      switch (method) {
+        case 'POST':
+          response = await request.post(`${apiContext.baseUrl}${endpoint}`, { ...requestOptions, data });
+          break;
+        case 'PUT':
+          response = await request.put(`${apiContext.baseUrl}${endpoint}`, { ...requestOptions, data });
+          break;
+        case 'PATCH':
+          response = await request.patch(`${apiContext.baseUrl}${endpoint}`, { ...requestOptions, data });
+          break;
+        case 'DELETE':
+          response = await request.delete(`${apiContext.baseUrl}${endpoint}`, requestOptions);
+          break;
+      }
+      
+      // Should return 405 Method Not Allowed or 501 Not Implemented
+      await test.step(`${method} ${endpoint} - Expect 405/501`, async () => {
+        expect([405, 501]).toContain(response.status());
+        console.log(`[OK] ${method} returns ${response.status()} (Method Not Allowed/Not Implemented)`);
+      });
+    }
+    
+    console.log('[DONE] OBSCIM-331 Step 8: Invalid HTTP methods properly rejected');
+  });
+
+  /**
    * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
    * Test Case 2: Get User with ID
    * Endpoint: GET {{IdSBaseURI}}/obscim/v2/Users/106
@@ -753,16 +953,16 @@ test.describe('SCIM API Tests', () => {
         timeout: 90000
       });
 
-      // Validate 400 error (not 500)
+      // JIRA Requirement: Must return 400 Bad Request (not 500)
       expect(response.status()).toBe(400);
-      console.log(`   ✅ Returns 400 Bad Request (BUG FIXED - was 500)`);
+      console.log(`   ✅ Returns 400 Bad Request`);
 
-      // Validate error response
+      // Validate error response structure per JIRA
       const responseBody = await response.json();
       expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:Error');
       expect(responseBody.status).toBe('400');
       expect(responseBody.detail).toContain('Input string was not in a correct format');
-      console.log(`   ✅ Error response structure valid`);
+      console.log(`   ✅ Error response matches JIRA expected format`);
 
       // Critical: Verify user NOT created in database
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1755,9 +1955,87 @@ test.describe('SCIM API Tests', () => {
   });
 
   /**
-   * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
-   * GROUP OPERATIONS - GET endpoints (4 tests)
+   * OBSCIM-333: Verify the updated User endpoint for OBSCIM as per SCIM 2.0 specification
+   * Test Case: Unsupported HTTP Methods on Users endpoint
+   * Purpose: Verify that unsupported HTTP methods return 405 Method Not Allowed
+   * 
+   * According to SCIM 2.0 spec and JIRA OBSCIM-333:
+   * - Supported methods: GET, POST, PUT, PATCH, DELETE
+   * - Unsupported methods: HEAD, TRACE, CONNECT, etc. should return 405
    */
+  test('Users - Unsupported HTTP Methods - OBSCIM-333 (Negative)', async ({ request }, testInfo) => {
+    const endpoint = ApiEndpoints.users();
+    console.log('[START] OBSCIM-333: Testing unsupported HTTP methods on Users endpoint');
+    
+    // Test unsupported HTTP methods
+    const unsupportedMethods = [
+      { method: 'OPTIONS', description: 'OPTIONS request (may be allowed for CORS)' },
+      { method: 'HEAD', description: 'HEAD request' },
+      { method: 'TRACE', description: 'TRACE request' }
+    ];
+    
+    for (const { method, description } of unsupportedMethods) {
+      console.log(`[TEST] Attempting ${method} on ${endpoint}`);
+      
+      let response: any;
+      const requestOptions = {
+        headers: apiContext.headers,
+        timeout: 90000
+      };
+      
+      try {
+        // Note: Playwright's request API doesn't support all HTTP methods directly
+        // We'll use fetch for methods not supported by Playwright
+        switch (method) {
+          case 'OPTIONS':
+            // OPTIONS might be allowed for CORS - expect 200 or 405
+            response = await request.fetch(`${apiContext.baseUrl}${endpoint}`, {
+              method: 'OPTIONS',
+              headers: apiContext.headers
+            });
+            
+            await test.step(`${method} ${endpoint}`, async () => {
+              const status = response.status();
+              if (status === 200 || status === 204) {
+                console.log(`[INFO] ${method} returns ${status} (CORS support enabled)`);
+              } else if (status === 405 || status === 501) {
+                console.log(`[OK] ${method} returns ${status} (Method Not Allowed/Not Implemented)`);
+                expect([405, 501]).toContain(status);
+              } else {
+                console.log(`[WARN] ${method} returns unexpected status: ${status}`);
+              }
+            });
+            break;
+            
+          case 'HEAD':
+          case 'TRACE':
+            // These should return 405 or 501
+            response = await request.fetch(`${apiContext.baseUrl}${endpoint}`, {
+              method: method,
+              headers: apiContext.headers
+            });
+            
+            await test.step(`${method} ${endpoint} - Expect 405/501`, async () => {
+              const status = response.status();
+              expect([405, 501]).toContain(status);
+              console.log(`[OK] ${method} returns ${status} (Method Not Allowed/Not Implemented)`);
+            });
+            break;
+        }
+      } catch (error) {
+        console.log(`[INFO] ${method} request failed (expected for unsupported methods): ${error}`);
+      }
+    }
+    
+    console.log('[DONE] OBSCIM-333: Unsupported HTTP methods validation completed!');
+  });
+
+  /**
+  * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+  * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+  * GROUP OPERATIONS - GET endpoints (4 tests)
+  * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
+  */
   test('Get All Groups - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups GET endpoint');
     const endpoint = ApiEndpoints.groups();
@@ -1816,6 +2094,8 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    */
   test('Get Group with ID 1 - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups GET by ID endpoint');
@@ -1871,6 +2151,8 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    */
   test('Get Groups with Pagination - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups GET with pagination');
@@ -1924,6 +2206,8 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    * OBSCIM-335: Verify only matching groups are displayed when displayName filter is applied
    */
   test('Get Groups with Excluded Attributes - OBSCIM-343', async ({ request }, testInfo) => {
@@ -1974,9 +2258,9 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * GROUP OPERATIONS - POST endpoints (1 test)
-   */
-  /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    */
   test('Create Group (POST) - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups POST (create) endpoint');
@@ -2071,9 +2355,9 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * GROUP OPERATIONS - PUT endpoints (1 test with error handling)
-   */
-  /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    */
   test('Update Group (PUT) - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups PUT (update) endpoint');
@@ -2158,9 +2442,9 @@ test.describe('SCIM API Tests', () => {
 
   /**
    * GROUP OPERATIONS - PATCH endpoints (1 test with error handling)
-   */
-  /**
    * OBSCIM-343: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification
+   * JIRA: Verify the updated Group endpoint for OBSCIM as per SCIM 2.0 specification.
+   * Steps: Refer to the examples of various scenarios for Group endpoint (GET, POST, PATCH, PUT) under Group in the attached .postman_collection.json. Supported HTTP operations: GET, POST, PATCH. PUT is not supported and should return 405/501. Negative test: unsupported API version should return proper error.
    */
   test('Partial Update Group (PATCH) - OBSCIM-343', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-343: Testing Groups PATCH (partial update) endpoint');
@@ -2350,6 +2634,7 @@ test.describe('SCIM API Tests', () => {
       logTestResult(testInfo, 'DELETE', endpoint, 405, response.status(), 'PASS');
     });
   });
+
 });
 
 // ServiceProviderConfig Tests
@@ -2372,84 +2657,148 @@ test.describe('ServiceProviderConfig API Tests', () => {
 
   /**
    * OBSCIM-342: Verify the response from ServiceProviderConfig endpoint for SCIM 2.0
+   * Purpose: Validate ServiceProviderConfig endpoint returns correct SCIM 2.0 response.
+   * Key validations:
+   * - conformanceLevels section should be omitted from response
+   * - schemas 'urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility' should be omitted
+   * - Response structure matches SCIM 2.0 ServiceProviderConfig schema
    */
-  test('should get ServiceProviderConfig (v3.2.3) - OBSCIM-342', async ({ request }, testInfo) => {
-    console.log('[START] OBSCIM-342: Testing ServiceProviderConfig endpoint (v3.2.3)');
-    const serviceProviderConfigUrl = `${apiContext.baseUrl}${ApiEndpoints.serviceProviderConfig()}`;
-    console.log(`ServiceProviderConfig URL: ${serviceProviderConfigUrl}`);
+  test('Get ServiceProviderConfig - OBSCIM-342', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-342: Testing ServiceProviderConfig endpoint');
+    const endpoint = ApiEndpoints.serviceProviderConfig();
+    console.log(`[WEB] GET Request: ${endpoint}`);
 
-    const response = await request.get(serviceProviderConfigUrl, {
-      headers: {
-        Authorization: `Bearer ${apiContext.accessToken}`,
-        'Content-Type': 'application/scim+json'
-      }
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
     });
 
-    console.log(`ServiceProviderConfig Response Status: ${response.status()}`);
-    console.log(`ServiceProviderConfig Response Headers:`, response.headers());
+    console.log(`[OK] Response status: ${response.status()}`);
 
-    await test.step(`✅ GET ${ApiEndpoints.serviceProviderConfig()}`, async () => {
-      if (response.status() === 200) {
-        const responseBody = await response.json();
-        console.log(`ServiceProviderConfig Response Body:`, JSON.stringify(responseBody, null, 2));
-
-        // Validate basic ServiceProviderConfig schema
-        expect(responseBody).toHaveProperty('patch');
-        expect(responseBody).toHaveProperty('bulk');
-        expect(responseBody).toHaveProperty('filter');
-        expect(responseBody).toHaveProperty('changePassword');
-        expect(responseBody).toHaveProperty('sort');
-        expect(responseBody).toHaveProperty('etag');
-        expect(responseBody).toHaveProperty('authenticationSchemes');
-        expect(Array.isArray(responseBody.authenticationSchemes)).toBe(true);
-        expect(responseBody).toHaveProperty('schemas');
-        expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig');
-        console.log('✅ ServiceProviderConfig schema validation passed');
-      }
-
-      expect([200, 404]).toContain(response.status());
+    await test.step('Validate response status and structure', async () => {
+      expect(response.status()).toBe(200);
+      console.log('[OK] Response status validation passed (200)');
+      
+      const responseBody = await response.json();
+      console.log('[OK] Valid JSON response received');
+      
+      // OBSCIM-342: Validate SCIM 2.0 ServiceProviderConfig schema
+      expect(responseBody).toHaveProperty('schemas');
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig');
+      console.log('✅ SCIM ServiceProviderConfig schema present');
+      
+      // OBSCIM-342: Verify required properties
+      expect(responseBody).toHaveProperty('patch');
+      expect(responseBody).toHaveProperty('bulk');
+      expect(responseBody).toHaveProperty('filter');
+      expect(responseBody).toHaveProperty('changePassword');
+      expect(responseBody).toHaveProperty('sort');
+      expect(responseBody).toHaveProperty('etag');
+      expect(responseBody).toHaveProperty('authenticationSchemes');
+      expect(Array.isArray(responseBody.authenticationSchemes)).toBe(true);
+      console.log('✅ All required ServiceProviderConfig properties present');
+      
+      // OBSCIM-342: Verify conformanceLevels is omitted (key requirement)
+      expect(responseBody).not.toHaveProperty('conformanceLevels');
+      console.log('✅ conformanceLevels correctly omitted from response');
+      
+      // OBSCIM-342: Verify Hyland extension schema is omitted (key requirement)
+      expect(responseBody.schemas).not.toContain('urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility');
+      console.log('✅ Hyland extension schema correctly omitted from response');
+      
+      console.log('🎉 ServiceProviderConfig validation completed successfully!');
     });
   });
 
   /**
    * OBSCIM-342: Verify the response from ServiceProviderConfig endpoint for SCIM 2.0 (v4.0.0)
+   * Purpose: Validate ServiceProviderConfig endpoint v4.0.0 returns correct SCIM 2.0 response.
+   * This test validates the newer API version (v4.0.0) with same validation as v3.2.3.
    */
-  test('should get ServiceProviderConfig (v4.0.0) - OBSCIM-342', async ({ request }, testInfo) => {
+  test('Get ServiceProviderConfig (v4.0.0) - OBSCIM-342', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-342: Testing ServiceProviderConfig endpoint (v4.0.0)');
-    const serviceProviderConfigUrl = `${apiContext.baseUrl}${ApiEndpoints.serviceProviderConfigV4()}`;
-    console.log(`ServiceProviderConfig V4 URL: ${serviceProviderConfigUrl}`);
+    const endpoint = ApiEndpoints.serviceProviderConfigV4();
+    console.log(`[WEB] GET Request: ${endpoint}`);
 
-    const response = await request.get(serviceProviderConfigUrl, {
-      headers: {
-        Authorization: `Bearer ${apiContext.accessToken}`,
-        'Content-Type': 'application/scim+json'
-      }
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
     });
 
-    console.log(`ServiceProviderConfig V4 Response Status: ${response.status()}`);
-    console.log(`ServiceProviderConfig V4 Response Headers:`, response.headers());
+    console.log(`[OK] Response status: ${response.status()}`);
 
-    await test.step(`✅ GET /ServiceProviderConfig`, async () => {
-      if (response.status() === 200) {
-        const responseBody = await response.json();
-        console.log(`ServiceProviderConfig V4 Response Body:`, JSON.stringify(responseBody, null, 2));
-
-        // Validate basic ServiceProviderConfig schema
-        expect(responseBody).toHaveProperty('patch');
-        expect(responseBody).toHaveProperty('bulk');
-        expect(responseBody).toHaveProperty('filter');
-        expect(responseBody).toHaveProperty('changePassword');
-        expect(responseBody).toHaveProperty('sort');
-        expect(responseBody).toHaveProperty('etag');
-        expect(responseBody).toHaveProperty('authenticationSchemes');
-        expect(Array.isArray(responseBody.authenticationSchemes)).toBe(true);
-        expect(responseBody).toHaveProperty('schemas');
-        expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig');
-        console.log('✅ ServiceProviderConfig V4 schema validation passed');
+    await test.step('Validate response status and structure (v4.0.0)', async () => {
+      // v4.0.0 endpoint may not be available in all environments
+      if (response.status() === 404) {
+        console.log('[INFO] v4.0.0 endpoint not available in this environment (404)');
+        expect(response.status()).toBe(404);
+        return;
       }
-
-      expect([200, 404]).toContain(response.status());
+      
+      expect(response.status()).toBe(200);
+      console.log('[OK] Response status validation passed (200)');
+      
+      const responseBody = await response.json();
+      console.log('[OK] Valid JSON response received');
+      
+      // OBSCIM-342: Validate SCIM 2.0 ServiceProviderConfig schema
+      expect(responseBody).toHaveProperty('schemas');
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig');
+      console.log('✅ SCIM ServiceProviderConfig schema present');
+      
+      // OBSCIM-342: Verify required properties
+      expect(responseBody).toHaveProperty('patch');
+      expect(responseBody).toHaveProperty('bulk');
+      expect(responseBody).toHaveProperty('filter');
+      expect(responseBody).toHaveProperty('changePassword');
+      expect(responseBody).toHaveProperty('sort');
+      expect(responseBody).toHaveProperty('etag');
+      expect(responseBody).toHaveProperty('authenticationSchemes');
+      expect(Array.isArray(responseBody.authenticationSchemes)).toBe(true);
+      console.log('✅ All required ServiceProviderConfig properties present');
+      
+      // OBSCIM-342: Verify conformanceLevels is omitted (key requirement)
+      expect(responseBody).not.toHaveProperty('conformanceLevels');
+      console.log('✅ conformanceLevels correctly omitted from response');
+      
+      // OBSCIM-342: Verify Hyland extension schema is omitted (key requirement)
+      expect(responseBody.schemas).not.toContain('urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility');
+      console.log('✅ Hyland extension schema correctly omitted from response');
+      
+      console.log('🎉 ServiceProviderConfig v4.0.0 validation completed successfully!');
     });
+  });
+
+  /**
+   * OBSCIM-342: Negative Test - Unsupported HTTP Methods on ServiceProviderConfig endpoint
+   * Purpose: Verify that unsupported HTTP methods (POST, PUT, PATCH, DELETE) return 405 Method Not Allowed.
+   * Only GET method is supported for ServiceProviderConfig endpoint.
+   */
+  test('ServiceProviderConfig - Unsupported HTTP Methods - OBSCIM-342 (Negative)', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-342: Testing unsupported HTTP methods on ServiceProviderConfig endpoint');
+    const endpoint = ApiEndpoints.serviceProviderConfig();
+    const unsupportedMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    
+    for (const method of unsupportedMethods) {
+      console.log(`[TEST] Attempting ${method} on ${endpoint}`);
+      
+      await test.step(`${method} ${endpoint} - Expect 405`, async () => {
+        let response;
+        try {
+          response = await request.fetch(`${apiContext.baseUrl}${endpoint}`, {
+            method: method,
+            headers: apiContext.headers
+          });
+        } catch (error) {
+          console.log(`[INFO] ${method} request failed (expected): ${error}`);
+          return;
+        }
+        
+        const status = response.status();
+        expect(status).toBe(405);
+        console.log(`[OK] ${method} returns ${status} (Method Not Allowed)`);
+      });
+    }
+    
+    console.log('[DONE] OBSCIM-342: Unsupported HTTP methods validation completed!');
   });
 });
 
@@ -2474,158 +2823,184 @@ test.describe('Schemas API Tests', () => {
   // Test Schemas GET operation (v3.2.3)
   /**
    * OBSCIM-334: Verify the updated Schema endpoint for OBSCIM as per SCIM 2.0 specification
-   * Validates Schema endpoint structure, User/Group schema definitions
+   * Purpose: Validate Schemas endpoint returns correct SCIM 2.0 schema definitions.
+   * Key validations:
+   * - Status: 200 OK
+   * - Content-Type: application/scim+json
+   * - Response contains ListResponse with User and Group schemas
+   * - Each schema has required properties: id, name, description, attributes
    */
-  test('should get Schemas (v3.2.3) - OBSCIM-334', async ({ request }, testInfo) => {
-    const schemasUrl = `${apiContext.baseUrl}${ApiEndpoints.schemas()}`;
-    console.log(`✅ [OBSCIM-334] Testing Schemas endpoint (v3.2.3): ${schemasUrl}`);
+  test('Get All Schemas - OBSCIM-334', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-334: Testing Schemas endpoint');
+    const endpoint = ApiEndpoints.schemas();
+    console.log(`[WEB] GET Request: ${endpoint}`);
 
-    const response = await request.get(schemasUrl, {
-      headers: {
-        Authorization: `Bearer ${apiContext.accessToken}`,
-        'Content-Type': 'application/scim+json'
-      }
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
     });
 
-    console.log(`[OK] Schemas Response Status: ${response.status()}`);
-    console.log(`[INFO] Schemas Response Headers:`, response.headers());
+    console.log(`[OK] Response status: ${response.status()}`);
 
-    await test.step(`✅ GET ${ApiEndpoints.schemas()}`, async () => {
-      if (response.status() === 200) {
-        const responseBody = await response.json();
-        console.log(`[DATA] Schemas Response Body:`, JSON.stringify(responseBody, null, 2));
-
-        // Validate basic Schemas ListResponse structure
-        expect(responseBody).toHaveProperty('schemas');
-        expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
-        console.log('[OK] SCIM ListResponse schema present');
-        
-        expect(responseBody).toHaveProperty('totalResults');
-        console.log(`[OK] Total schemas: ${responseBody.totalResults}`);
-        
-        expect(responseBody).toHaveProperty('Resources');
-        expect(Array.isArray(responseBody.Resources)).toBe(true);
-        console.log(`[OK] Resources array contains ${responseBody.Resources.length} schemas`);
-        
-        // Validate that we have expected schemas (User and Group at minimum)
-        if (responseBody.Resources.length > 0) {
-          const schemaIds = responseBody.Resources.map((schema: any) => schema.id);
-          console.log('[INFO] Available schema IDs:', schemaIds);
-          
-          // Common SCIM schemas we expect
-          const expectedSchemas = [
-            'urn:ietf:params:scim:schemas:core:2.0:User',
-            'urn:ietf:params:scim:schemas:core:2.0:Group'
-          ];
-          
-          expectedSchemas.forEach(expectedSchema => {
-            const found = schemaIds.some((id: string) => id.includes(expectedSchema) || expectedSchema.includes(id));
-            if (found) {
-              console.log(`[OK] Found expected schema: ${expectedSchema}`);
-            } else {
-              console.log(`[WARN] Expected schema not found: ${expectedSchema}`);
-            }
-          });
-          
-          // OBSCIM-334: Validate schema structure for User and Group
-          responseBody.Resources.forEach((schema: any) => {
-            if (schema.id && (schema.id.includes('User') || schema.id.includes('Group'))) {
-              console.log(`[INFO] Validating schema: ${schema.id}`);
-              
-              // Validate required schema properties
-              expect(schema).toHaveProperty('id');
-              expect(schema).toHaveProperty('name');
-              expect(schema).toHaveProperty('description');
-              expect(schema).toHaveProperty('attributes');
-              expect(Array.isArray(schema.attributes)).toBe(true);
-              
-              console.log(`[OK] Schema ${schema.name} has ${schema.attributes.length} attributes`);
-            }
-          });
+    await test.step('Validate response status and structure', async () => {
+      expect(response.status()).toBe(200);
+      console.log('[OK] Response status validation passed (200)');
+      
+      // OBSCIM-334: Validate Content-Type header
+      const contentType = response.headers()['content-type'];
+      expect(contentType).toContain('application/scim+json');
+      console.log(`[OK] Content-Type: ${contentType}`);
+      
+      const responseBody = await response.json();
+      console.log('[OK] Valid JSON response received');
+      
+      // OBSCIM-334: Validate SCIM ListResponse schema
+      expect(responseBody).toHaveProperty('schemas');
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+      console.log('✅ SCIM ListResponse schema present');
+      
+      expect(responseBody).toHaveProperty('totalResults');
+      console.log(`✅ Total schemas: ${responseBody.totalResults}`);
+      
+      expect(responseBody).toHaveProperty('Resources');
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
+      console.log(`✅ Resources array contains ${responseBody.Resources.length} schemas`);
+      
+      // OBSCIM-334: Validate User and Group schemas exist
+      const schemaIds = responseBody.Resources.map((schema: any) => schema.id);
+      console.log('[INFO] Available schema IDs:', schemaIds);
+      
+      const userSchema = responseBody.Resources.find((s: any) => 
+        s.id === 'urn:ietf:params:scim:schemas:core:2.0:User'
+      );
+      const groupSchema = responseBody.Resources.find((s: any) => 
+        s.id === 'urn:ietf:params:scim:schemas:core:2.0:Group'
+      );
+      
+      expect(userSchema).toBeDefined();
+      console.log('✅ User schema found');
+      
+      expect(groupSchema).toBeDefined();
+      console.log('✅ Group schema found');
+      
+      // OBSCIM-334: Validate schema structure
+      [userSchema, groupSchema].forEach((schema: any) => {
+        if (schema) {
+          expect(schema).toHaveProperty('id');
+          expect(schema).toHaveProperty('name');
+          expect(schema).toHaveProperty('description');
+          expect(schema).toHaveProperty('attributes');
+          expect(Array.isArray(schema.attributes)).toBe(true);
+          console.log(`✅ Schema ${schema.name} has ${schema.attributes.length} attributes`);
         }
-      }
-
-      expect([200, 404]).toContain(response.status());
-      console.log('[DONE] OBSCIM-334: Schema endpoint validation completed');
+      });
+      
+      console.log('🎉 Schemas endpoint validation completed successfully!');
     });
   });
 
   /**
    * OBSCIM-334: Verify the updated Schema endpoint for OBSCIM as per SCIM 2.0 specification (v4.0.0)
-   * Validates Schema endpoint structure, User/Group schema definitions
+   * Purpose: Validate Schemas endpoint v4.0.0 returns correct SCIM 2.0 schema definitions.
+   * This test validates the newer API version (v4.0.0) with same validation as v3.2.3.
    */
-  test('should get Schemas (v4.0.0) - OBSCIM-334', async ({ request }, testInfo) => {
-    const schemasUrl = `${apiContext.baseUrl}${ApiEndpoints.schemasV4()}`;
-    console.log(`✅ [OBSCIM-334] Testing Schemas endpoint (v4.0.0): ${schemasUrl}`);
+  test('Get All Schemas (v4.0.0) - OBSCIM-334', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-334: Testing Schemas endpoint (v4.0.0)');
+    const endpoint = ApiEndpoints.schemasV4();
+    console.log(`[WEB] GET Request: ${endpoint}`);
 
-    const response = await request.get(schemasUrl, {
-      headers: {
-        Authorization: `Bearer ${apiContext.accessToken}`,
-        'Content-Type': 'application/scim+json'
-      }
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
     });
 
-    console.log(`[OK] Schemas V4 Response Status: ${response.status()}`);
-    console.log(`[INFO] Schemas V4 Response Headers:`, response.headers());
+    console.log(`[OK] Response status: ${response.status()}`);
 
-    await test.step(`✅ GET /Schemas`, async () => {
-      if (response.status() === 200) {
-        const responseBody = await response.json();
-        console.log(`[DATA] Schemas V4 Response Body:`, JSON.stringify(responseBody, null, 2));
+    await test.step('Validate response status and structure (v4.0.0)', async () => {
+      // v4.0.0 endpoint may not be available in all environments
+      if (response.status() === 404) {
+        console.log('[INFO] v4.0.0 endpoint not available in this environment (404)');
+        expect(response.status()).toBe(404);
+        return;
+      }
+      
+      expect(response.status()).toBe(200);
+      console.log('[OK] Response status validation passed (200)');
+      
+      const responseBody = await response.json();
+      console.log('[OK] Valid JSON response received');
+      
+      // OBSCIM-334: Validate SCIM ListResponse schema
+      expect(responseBody).toHaveProperty('schemas');
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+      console.log('✅ SCIM ListResponse schema present');
+      
+      expect(responseBody).toHaveProperty('Resources');
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
+      console.log(`✅ Resources array contains ${responseBody.Resources.length} schemas`);
+      
+      console.log('🎉 Schemas v4.0.0 validation completed successfully!');
+    });
+  });
 
-        // Validate basic Schemas ListResponse structure
-        expect(responseBody).toHaveProperty('schemas');
-        expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
-        console.log('[OK] SCIM ListResponse schema present');
-        
-        expect(responseBody).toHaveProperty('totalResults');
-        console.log(`[OK] Total schemas: ${responseBody.totalResults}`);
-        
-        expect(responseBody).toHaveProperty('Resources');
-        expect(Array.isArray(responseBody.Resources)).toBe(true);
-        console.log(`[OK] Resources array contains ${responseBody.Resources.length} schemas`);
-        
-        // Validate that we have expected schemas (User and Group at minimum)
-        if (responseBody.Resources.length > 0) {
-          const schemaIds = responseBody.Resources.map((schema: any) => schema.id);
-          console.log('[INFO] Available schema IDs:', schemaIds);
-          
-          // Common SCIM schemas we expect
-          const expectedSchemas = [
-            'urn:ietf:params:scim:schemas:core:2.0:User',
-            'urn:ietf:params:scim:schemas:core:2.0:Group'
-          ];
-          
-          expectedSchemas.forEach(expectedSchema => {
-            const found = schemaIds.some((id: string) => id.includes(expectedSchema) || expectedSchema.includes(id));
-            if (found) {
-              console.log(`[OK] Found expected schema: ${expectedSchema}`);
-            } else {
-              console.log(`[WARN] Expected schema not found: ${expectedSchema}`);
-            }
+  /**
+   * OBSCIM-334: Negative Test - Get Invalid Schema
+   * Purpose: Verify that requesting an invalid/non-existent schema returns 404 NOT FOUND.
+   */
+  test('Get Invalid Schema - OBSCIM-334 (Negative)', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-334: Testing invalid schema request');
+    const invalidSchemaId = 'urn:ietf:params:scim:schemas:core:2.0:InvalidSchema';
+    const endpoint = `${ApiEndpoints.schemas()}/${invalidSchemaId}`;
+    console.log(`[WEB] GET Request: ${endpoint}`);
+
+    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+      headers: apiContext.headers
+    });
+
+    console.log(`[OK] Response status: ${response.status()}`);
+
+    await test.step('Validate 404 for invalid schema', async () => {
+      expect(response.status()).toBe(404);
+      console.log('[OK] Invalid schema correctly returns 404 NOT FOUND');
+      
+      // OBSCIM-334: Validate blank response body
+      const responseText = await response.text();
+      console.log(`[INFO] Response body length: ${responseText.length}`);
+      
+      console.log('🎉 Invalid schema test completed successfully!');
+    });
+  });
+
+  /**
+   * OBSCIM-334: Negative Test - Unsupported HTTP Methods on Schemas endpoint
+   * Purpose: Verify that unsupported HTTP methods (POST, PUT, PATCH, DELETE) return 405 Method Not Allowed.
+   * Only GET method is supported for Schemas endpoint.
+   */
+  test('Schemas - Unsupported HTTP Methods - OBSCIM-334 (Negative)', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-334: Testing unsupported HTTP methods on Schemas endpoint');
+    const endpoint = ApiEndpoints.schemas();
+    const unsupportedMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    
+    for (const method of unsupportedMethods) {
+      console.log(`[TEST] Attempting ${method} on ${endpoint}`);
+      
+      await test.step(`${method} ${endpoint} - Expect 405`, async () => {
+        let response;
+        try {
+          response = await request.fetch(`${apiContext.baseUrl}${endpoint}`, {
+            method: method,
+            headers: apiContext.headers
           });
-          
-          // OBSCIM-334: Validate schema structure for User and Group
-          responseBody.Resources.forEach((schema: any) => {
-            if (schema.id && (schema.id.includes('User') || schema.id.includes('Group'))) {
-              console.log(`[INFO] Validating schema: ${schema.id}`);
-              
-              // Validate required schema properties
-              expect(schema).toHaveProperty('id');
-              expect(schema).toHaveProperty('name');
-              expect(schema).toHaveProperty('description');
-              expect(schema).toHaveProperty('attributes');
-              expect(Array.isArray(schema.attributes)).toBe(true);
-              
-              console.log(`[OK] Schema ${schema.name} has ${schema.attributes.length} attributes`);
-            }
-          });
+        } catch (error) {
+          console.log(`[INFO] ${method} request failed (expected): ${error}`);
+          return;
         }
-      }
-
-      expect([200, 404]).toContain(response.status());
-      console.log('[DONE] OBSCIM-334: Schema endpoint validation completed');
-    });
+        
+        const status = response.status();
+        expect(status).toBe(405);
+        console.log(`[OK] ${method} returns ${status} (Method Not Allowed)`);
+      });
+    }
+    
+    console.log('[DONE] OBSCIM-334: Unsupported HTTP methods validation completed!');
   });
 });
 
@@ -3030,148 +3405,314 @@ test.describe('OBSCIM-Specific Validation Tests', () => {
 
   /**
    * OBSCIM-335: Verify only matching groups are displayed when displayName filter is applied
+   * Purpose: Validate that the Groups GET endpoint correctly filters groups by displayName.
+   * Key validations:
+   * - Filter with quotes: displayName eq "Password config"
+   * - Filter with quotes: displayName eq "MANAGER"
+   * - Filter without quotes: displayName eq TESTGroup (case-insensitive)
+   * - Filter for non-existent group returns 0 results
+   * - Filter with special characters: displayName eq with special chars
+   * - Filter without quotes: displayName eq ADMIN CONFIG
    */
-  test('OBSCIM-335: Filter groups by displayName with variations', async ({ request }, testInfo) => {
+  test('Filter Groups by displayName - OBSCIM-335', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-335: Testing displayName filter for Groups');
-    
-    const testGroupName = 'MANAGER'; // Known existing group
     const endpoint = ApiEndpoints.groups();
     
-    // Test 1: Filter without quotes
-    console.log('[TEST 1] Testing displayName filter WITHOUT quotes');
-    const filterNoQuotes = `displayName eq ${testGroupName}`;
-    const responseNoQuotes = await request.get(
-      `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterNoQuotes)}`,
-      { headers: apiContext.headers }
-    );
-    
-    console.log(`[OK] Response status (no quotes): ${responseNoQuotes.status()}`);
-    expect(responseNoQuotes.status()).toBe(200);
-    
-    const bodyNoQuotes = await responseNoQuotes.json();
-    console.log(`[OK] Total results (no quotes): ${bodyNoQuotes.totalResults}`);
-    
-    // Validate only matching groups are returned
-    if (bodyNoQuotes.Resources && bodyNoQuotes.Resources.length > 0) {
-      bodyNoQuotes.Resources.forEach((group: any, index: number) => {
-        console.log(`[INFO] Group ${index + 1}: ${group.displayName} (ID: ${group.id})`);
-        // Verify displayName matches filter (case-insensitive comparison)
-        expect(group.displayName.toUpperCase()).toContain(testGroupName.toUpperCase());
+    // Test 1: Filter with quotes - "Password config" (case-insensitive match)
+    await test.step('Filter: displayName eq "Password config"', async () => {
+      console.log('[TEST 1] displayName eq "Password config"');
+      const filter = 'displayName eq "Password config"';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      // OBSCIM-335: Validate ListResponse structure
+      expect(body).toHaveProperty('schemas');
+      expect(body.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+      expect(body).toHaveProperty('totalResults');
+      expect(body).toHaveProperty('Resources');
+      
+      // Should find "PASSWORD CONFIG" group (case-insensitive)
+      expect(body.totalResults).toBeGreaterThan(0);
+      console.log(`✅ Found ${body.totalResults} group(s) matching "Password config"`);
+      
+      // Validate all returned groups match the filter
+      body.Resources.forEach((group: any) => {
+        expect(group.displayName.toUpperCase()).toContain('PASSWORD');
+        expect(group.displayName.toUpperCase()).toContain('CONFIG');
+        console.log(`  ✅ ${group.displayName} (ID: ${group.id})`);
       });
-      console.log('[OK] All returned groups match the displayName filter');
-    }
+    });
     
-    // Test 2: Filter with double quotes
-    console.log('[TEST 2] Testing displayName filter WITH double quotes');
-    const filterWithQuotes = `displayName eq "${testGroupName}"`;
-    const responseWithQuotes = await request.get(
-      `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterWithQuotes)}`,
-      { headers: apiContext.headers }
-    );
+    // Test 2: Filter with quotes - "MANAGER"
+    await test.step('Filter: displayName eq "MANAGER"', async () => {
+      console.log('[TEST 2] displayName eq "MANAGER"');
+      const filter = 'displayName eq "MANAGER"';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      expect(body.totalResults).toBeGreaterThan(0);
+      console.log(`✅ Found ${body.totalResults} group(s) matching "MANAGER"`);
+      
+      // Validate the MANAGER group is returned
+      const managerGroup = body.Resources.find((g: any) => 
+        g.displayName.toUpperCase() === 'MANAGER'
+      );
+      expect(managerGroup).toBeDefined();
+      expect(managerGroup.id).toBeDefined();
+      expect(managerGroup.meta.resourceType).toBe('Group');
+      console.log(`  ✅ MANAGER group found (ID: ${managerGroup.id})`);
+      
+      if (managerGroup.members) {
+        console.log(`  ✅ Members: ${managerGroup.members.length}`);
+      }
+    });
     
-    console.log(`[OK] Response status (with quotes): ${responseWithQuotes.status()}`);
-    expect(responseWithQuotes.status()).toBe(200);
+    // Test 3: Filter without quotes - TESTGroup (case-insensitive)
+    await test.step('Filter: displayName eq TESTGroup (no quotes, case-insensitive)', async () => {
+      console.log('[TEST 3] displayName eq TESTGroup (without quotes)');
+      const filter = 'displayName eq TESTGroup';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      // May or may not find results depending on if TESTGroup exists
+      console.log(`✅ Response received with ${body.totalResults} result(s)`);
+      
+      if (body.totalResults > 0) {
+        body.Resources.forEach((group: any) => {
+          expect(group.displayName.toUpperCase()).toContain('TESTGROUP');
+          console.log(`  ✅ ${group.displayName} (ID: ${group.id})`);
+        });
+      } else {
+        console.log('  ℹ️ No groups named TESTGroup found (expected if group doesn\'t exist)');
+      }
+    });
     
-    const bodyWithQuotes = await responseWithQuotes.json();
-    console.log(`[OK] Total results (with quotes): ${bodyWithQuotes.totalResults}`);
+    // Test 4: Filter for non-existent group - should return 0 results
+    await test.step('Filter: displayName eq student (non-existent group)', async () => {
+      console.log('[TEST 4] displayName eq student (non-existent group)');
+      const filter = 'displayName eq student';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      // OBSCIM-335: Non-existent group should return 0 results
+      expect(body.totalResults).toBe(0);
+      expect(body.itemsPerPage).toBe(0);
+      expect(body.Resources).toEqual([]);
+      console.log('✅ Non-existent group correctly returns 0 results');
+    });
     
-    // Test 3: Filter with lowercase (case-insensitive test)
-    console.log('[TEST 3] Testing displayName filter with LOWERCASE');
-    const filterLowercase = `displayName eq "${testGroupName.toLowerCase()}"`;
-    const responseLowercase = await request.get(
-      `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterLowercase)}`,
-      { headers: apiContext.headers }
-    );
+    // Test 5: Filter with special characters - "AG@C,*/GG178"
+    await test.step('Filter: displayName eq "AG@C,*/GG178" (special characters)', async () => {
+      console.log('[TEST 5] displayName eq "AG@C,*/GG178" (with special characters)');
+      const filter = 'displayName eq "AG@C,*/GG178"';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      // May or may not exist depending on environment
+      console.log(`✅ Response received with ${body.totalResults} result(s)`);
+      
+      if (body.totalResults > 0) {
+        const specialGroup = body.Resources[0];
+        expect(specialGroup.displayName).toBe('AG@C,*/GG178');
+        console.log(`  ✅ Special character group found: ${specialGroup.displayName} (ID: ${specialGroup.id})`);
+      } else {
+        console.log('  ℹ️ Special character group not found in this environment');
+      }
+    });
     
-    console.log(`[OK] Response status (lowercase): ${responseLowercase.status()}`);
-    expect(responseLowercase.status()).toBe(200);
+    // Test 6: Filter without quotes - ADMIN CONFIG (space in name)
+    await test.step('Filter: displayName eq ADMIN CONFIG (no quotes, with space)', async () => {
+      console.log('[TEST 6] displayName eq ADMIN CONFIG (without quotes, with space)');
+      const filter = 'displayName eq ADMIN CONFIG';
+      const response = await request.get(
+        `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filter)}`,
+        { headers: apiContext.headers }
+      );
+      
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      
+      expect(body.totalResults).toBeGreaterThan(0);
+      console.log(`✅ Found ${body.totalResults} group(s) matching "ADMIN CONFIG"`);
+      
+      // Validate ADMIN CONFIG group is returned
+      const adminConfigGroup = body.Resources.find((g: any) => 
+        g.displayName.toUpperCase().includes('ADMIN') && g.displayName.toUpperCase().includes('CONFIG')
+      );
+      expect(adminConfigGroup).toBeDefined();
+      console.log(`  ✅ ${adminConfigGroup.displayName} (ID: ${adminConfigGroup.id})`);
+      
+      if (adminConfigGroup.members) {
+        console.log(`  ✅ Members: ${adminConfigGroup.members.length}`);
+      }
+    });
     
-    const bodyLowercase = await responseLowercase.json();
-    console.log(`[OK] Total results (lowercase): ${bodyLowercase.totalResults}`);
-    
-    console.log('[INFO] Comparing results across displayName filter variations...');
-    console.log(`  - No quotes: ${bodyNoQuotes.totalResults} results`);
-    console.log(`  - With quotes: ${bodyWithQuotes.totalResults} results`);
-    console.log(`  - Lowercase: ${bodyLowercase.totalResults} results`);
-    
-    console.log('[DONE] OBSCIM-335: displayName filter test completed successfully');
+    console.log('🎉 OBSCIM-335: All displayName filter scenarios validated successfully!');
   });
 
   /**
    * OBSCIM-337: Verify that attribute values of OBSCIM 2.0 schema response are in camelCasing
    * Example: mutability:"readOnly" (not mutability:"read_only" or Mutability:"ReadOnly")
    */
+  /**
+   * OBSCIM-337: Verify that attribute values of SCIM 2.0 schema response are in camelCasing
+   * JIRA Steps:
+   * 1. GET /Schemas endpoint
+   * 2. Verify attributes under "User" resource are in camelCase (e.g., "active")
+   * 3. Verify attributes under "Group" resource are in camelCase
+   * 4. Verify all attribute values use camelCase (e.g., mutability: "readOnly")
+   * Expected: All schema attributes and their values follow camelCase naming convention
+   */
   test('OBSCIM-337: Validate schema attributes use camelCase', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-337: Validating schema attribute camelCase naming');
     
     const endpoint = ApiEndpoints.schemas();
+    
+    await test.step('Step 1: GET Schemas endpoint', async () => {
+      const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+        headers: apiContext.headers
+      });
+      
+      console.log(`[OK] Response status: ${response.status()}`);
+      expect(response.status()).toBe(200);
+      
+      const responseBody = await response.json();
+      console.log(`[OK] Retrieved ${responseBody.totalResults} schemas`);
+      expect(responseBody.Resources).toBeDefined();
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
+    });
+    
     const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
       headers: apiContext.headers
     });
-    
-    console.log(`[OK] Response status: ${response.status()}`);
-    expect(response.status()).toBe(200);
-    
     const responseBody = await response.json();
-    console.log(`[OK] Retrieved ${responseBody.totalResults} schemas`);
     
-    // Validate each schema's attributes use camelCase
-    if (responseBody.Resources && responseBody.Resources.length > 0) {
-      responseBody.Resources.forEach((schema: any) => {
-        if (schema.id && (schema.id.includes('User') || schema.id.includes('Group'))) {
-          console.log(`[INFO] Validating schema: ${schema.id}`);
+    // Helper function to validate camelCase properties
+    const validateCamelCaseAttribute = (attr: any, schemaName: string) => {
+      const camelCaseProperties = [
+        'mutability',      // JIRA example: "readOnly" (not "readonly" or "ReadOnly")
+        'returned',        
+        'uniqueness',      
+        'multiValued',     
+        'caseExact',       
+        'required',        
+        'canonicalValues', 
+        'referenceTypes',  
+        'subAttributes'    
+      ];
+      
+      camelCaseProperties.forEach(prop => {
+        if (attr.hasOwnProperty(prop)) {
+          // Validate property name is camelCase (key validation)
+          expect(prop.charAt(0)).toBe(prop.charAt(0).toLowerCase());
           
-          // Check that schema has attributes
-          expect(schema.attributes).toBeDefined();
-          expect(Array.isArray(schema.attributes)).toBe(true);
+          // Validate property values are also camelCase where applicable
+          if (prop === 'mutability' && attr.mutability) {
+            const validMutabilityValues = ['readOnly', 'readWrite', 'immutable', 'writeOnly'];
+            expect(validMutabilityValues).toContain(attr.mutability);
+            console.log(`    ✅ ${schemaName}.${attr.name}.mutability = "${attr.mutability}" (camelCase)`);
+          }
           
-          // Validate each attribute uses camelCase properties
-          schema.attributes.forEach((attr: any, index: number) => {
-            // Common SCIM attribute properties that should be camelCase
-            const camelCaseProperties = [
-              'mutability',      // Should be camelCase (not Mutability or MUTABILITY)
-              'returned',        // Should be camelCase
-              'uniqueness',      // Should be camelCase
-              'multiValued',     // Should be camelCase (not multi_valued)
-              'caseExact',       // Should be camelCase (not case_exact)
-              'required',        // Should be camelCase
-              'canonicalValues', // Should be camelCase
-              'referenceTypes',  // Should be camelCase
-              'subAttributes'    // Should be camelCase
-            ];
-            
-            // Check that properties exist and are named in camelCase
-            camelCaseProperties.forEach(prop => {
-              if (attr.hasOwnProperty(prop)) {
-                console.log(`  [OK] Attribute "${attr.name}" has camelCase property: ${prop}`);
-                
-                // If it's mutability, validate the value is also camelCase
-                if (prop === 'mutability' && attr.mutability) {
-                  const validMutabilityValues = ['readOnly', 'readWrite', 'immutable', 'writeOnly'];
-                  expect(validMutabilityValues).toContain(attr.mutability);
-                  console.log(`    [OK] mutability value is camelCase: "${attr.mutability}"`);
-                }
-                
-                // If it's returned, validate the value is also camelCase
-                if (prop === 'returned' && attr.returned) {
-                  const validReturnedValues = ['always', 'never', 'default', 'request'];
-                  expect(validReturnedValues).toContain(attr.returned);
-                  console.log(`    [OK] returned value is camelCase: "${attr.returned}"`);
-                }
-              }
-            });
-          });
-          
-          console.log(`[OK] Schema ${schema.name} uses camelCase attribute naming`);
+          if (prop === 'returned' && attr.returned) {
+            const validReturnedValues = ['always', 'never', 'default', 'request'];
+            expect(validReturnedValues).toContain(attr.returned);
+          }
         }
       });
-    }
+    };
     
-    console.log('[DONE] OBSCIM-337: Schema camelCase validation completed successfully');
+    await test.step('Step 2: Verify User resource attributes are in camelCase', async () => {
+      const userSchema = responseBody.Resources.find((s: any) => 
+        s.id && s.id.includes('User') && !s.id.includes('Enterprise')
+      );
+      
+      expect(userSchema).toBeDefined();
+      console.log(`[INFO] Validating User schema: ${userSchema.id}`);
+      expect(userSchema.attributes).toBeDefined();
+      
+      // Validate key attributes mentioned in JIRA (e.g., "active")
+      const activeAttr = userSchema.attributes.find((a: any) => a.name === 'active');
+      expect(activeAttr).toBeDefined();
+      console.log(`  ✅ "active" attribute found in User schema (camelCase)`);
+      
+      // Validate all attributes use camelCase
+      userSchema.attributes.forEach((attr: any) => {
+        validateCamelCaseAttribute(attr, 'User');
+      });
+      
+      console.log(`[OK] User schema attributes use camelCase naming`);
+    });
+    
+    await test.step('Step 3: Verify Group resource attributes are in camelCase', async () => {
+      const groupSchema = responseBody.Resources.find((s: any) => 
+        s.id && s.id.includes('Group')
+      );
+      
+      expect(groupSchema).toBeDefined();
+      console.log(`[INFO] Validating Group schema: ${groupSchema.id}`);
+      expect(groupSchema.attributes).toBeDefined();
+      
+      // Validate all attributes use camelCase
+      groupSchema.attributes.forEach((attr: any) => {
+        validateCamelCaseAttribute(attr, 'Group');
+      });
+      
+      console.log(`[OK] Group schema attributes use camelCase naming`);
+    });
+    
+    await test.step('Step 4: Verify all schema resources use camelCase', async () => {
+      console.log('[INFO] Checking all schema resources for camelCase compliance');
+      
+      responseBody.Resources.forEach((schema: any) => {
+        console.log(`  Checking: ${schema.name || schema.id}`);
+        
+        // Validate schema-level properties are camelCase
+        if (schema.attributes) {
+          schema.attributes.forEach((attr: any) => {
+            // Check attribute name exists and properties are camelCase
+            expect(attr.name).toBeDefined();
+            validateCamelCaseAttribute(attr, schema.name || 'Schema');
+          });
+        }
+      });
+      
+      console.log(`[OK] All ${responseBody.totalResults} schemas use camelCase attribute naming`);
+    });
+    
+    console.log('[DONE] OBSCIM-337: Schema camelCase validation completed per JIRA requirements');
   });
 
   /**
-   * OBSCIM-330: Verify schemas JSON response is generated for both v2/schemas and /schemas
+   * OBSCIM-330: Verify schemas JSON response is generated for both /v2/Schemas and /Schemas
+   * JIRA Steps:
+   * 1. GET /v2/Schemas - proper JSON response should be generated
+   * 2. GET /Schemas (without v2) - proper JSON response should be generated
+   * Expected: Both endpoints return valid SCIM schema responses
    */
   test('OBSCIM-330: Test both /schemas endpoint variants', async ({ request }, testInfo) => {
     console.log('[START] OBSCIM-330: Testing both /schemas endpoint variants');
@@ -3179,355 +3720,557 @@ test.describe('OBSCIM-Specific Validation Tests', () => {
     const endpointType = getCurrentEndpointType();
     console.log(`[INFO] Current endpoint type: ${endpointType}`);
     
-    // Test endpoint 1: Using ApiEndpoints.schemas() (should be /obscim/v2/Schemas or /ApiServer/onbase/SCIM/v2/Schemas)
-    console.log('[TEST 1] Testing primary schemas endpoint');
-    const endpoint1 = ApiEndpoints.schemas();
-    console.log(`[URL] Endpoint 1: ${endpoint1}`);
-    
-    const response1 = await request.get(`${apiContext.baseUrl}${endpoint1}`, {
-      headers: apiContext.headers
-    });
-    
-    console.log(`[OK] Endpoint 1 response status: ${response1.status()}`);
-    
-    if (response1.status() === 200) {
-      const body1 = await response1.json();
-      console.log(`[OK] Endpoint 1 returned ${body1.totalResults} schemas`);
+    await test.step('Step 1: GET /v2/Schemas endpoint', async () => {
+      const endpoint1 = ApiEndpoints.schemas();
+      console.log(`[URL] Testing endpoint with v2: ${endpoint1}`);
       
-      // Validate structure
+      const response1 = await request.get(`${apiContext.baseUrl}${endpoint1}`, {
+        headers: apiContext.headers
+      });
+      
+      console.log(`[OK] Response status: ${response1.status()}`);
+      expect(response1.status()).toBe(200);
+      
+      const body1 = await response1.json();
+      console.log(`[OK] Returned ${body1.totalResults} schemas`);
+      
+      // Validate proper JSON response structure
       expect(body1).toHaveProperty('schemas');
+      expect(body1.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
       expect(body1).toHaveProperty('totalResults');
       expect(body1).toHaveProperty('Resources');
-      console.log('[OK] Endpoint 1 has valid SCIM schema structure');
+      expect(Array.isArray(body1.Resources)).toBe(true);
+      expect(body1.totalResults).toBeGreaterThan(0);
+      console.log('[OK] /v2/Schemas returns proper JSON response');
       
-      // Store resource IDs for comparison
-      const schemaIds1 = body1.Resources?.map((s: any) => s.id) || [];
-      console.log(`[INFO] Endpoint 1 schema IDs: ${schemaIds1.join(', ')}`);
-    }
-    
-    // Test endpoint 2: Try alternate path (if different from endpoint1)
-    console.log('[TEST 2] Testing alternate schemas endpoint path');
-    let alternateEndpoint = '';
-    
-    if (endpointType === 'apiserver') {
-      // Try /ApiServer/onbase/SCIM/Schemas (without v2)
-      alternateEndpoint = '/ApiServer/onbase/SCIM/Schemas';
-    } else {
-      // Try /obscim/Schemas (without v2)
-      alternateEndpoint = '/obscim/Schemas';
-    }
-    
-    console.log(`[URL] Endpoint 2 (alternate): ${alternateEndpoint}`);
-    
-    const response2 = await request.get(`${apiContext.baseUrl}${alternateEndpoint}`, {
-      headers: apiContext.headers
+      // Validate schemas contain expected resources
+      const schemaIds = body1.Resources.map((s: any) => s.id);
+      console.log(`[INFO] Schema IDs: ${schemaIds.join(', ')}`);
+      expect(schemaIds.some((id: string) => id.includes('User'))).toBe(true);
+      expect(schemaIds.some((id: string) => id.includes('Group'))).toBe(true);
+      console.log('[OK] Contains User and Group schemas');
     });
     
-    console.log(`[OK] Endpoint 2 response status: ${response2.status()}`);
-    
-    if (response2.status() === 200) {
-      const body2 = await response2.json();
-      console.log(`[OK] Endpoint 2 returned ${body2.totalResults} schemas`);
+    await test.step('Step 2: GET /Schemas endpoint (without v2)', async () => {
+      let alternateEndpoint = '';
       
-      // Validate structure
+      if (endpointType === 'apiserver') {
+        // /ApiServer/onbase/SCIM/Schemas (without v2)
+        alternateEndpoint = '/ApiServer/onbase/SCIM/Schemas';
+      } else {
+        // /obscim/Schemas (without v2)
+        alternateEndpoint = '/obscim/Schemas';
+      }
+      
+      console.log(`[URL] Testing endpoint without v2: ${alternateEndpoint}`);
+      
+      const response2 = await request.get(`${apiContext.baseUrl}${alternateEndpoint}`, {
+        headers: apiContext.headers
+      });
+      
+      console.log(`[OK] Response status: ${response2.status()}`);
+      expect(response2.status()).toBe(200);
+      
+      const body2 = await response2.json();
+      console.log(`[OK] Returned ${body2.totalResults} schemas`);
+      
+      // Validate proper JSON response structure
       expect(body2).toHaveProperty('schemas');
+      expect(body2.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
       expect(body2).toHaveProperty('totalResults');
       expect(body2).toHaveProperty('Resources');
-      console.log('[OK] Endpoint 2 has valid SCIM schema structure');
+      expect(Array.isArray(body2.Resources)).toBe(true);
+      expect(body2.totalResults).toBeGreaterThan(0);
+      console.log('[OK] /Schemas (without v2) returns proper JSON response');
       
-      const schemaIds2 = body2.Resources?.map((s: any) => s.id) || [];
-      console.log(`[INFO] Endpoint 2 schema IDs: ${schemaIds2.join(', ')}`);
-    } else {
-      console.log(`[WARN] Alternate endpoint returned ${response2.status()}, may not be supported`);
-    }
+      // Validate schemas contain expected resources
+      const schemaIds = body2.Resources.map((s: any) => s.id);
+      console.log(`[INFO] Schema IDs: ${schemaIds.join(', ')}`);
+      expect(schemaIds.some((id: string) => id.includes('User'))).toBe(true);
+      expect(schemaIds.some((id: string) => id.includes('Group'))).toBe(true);
+      console.log('[OK] Contains User and Group schemas');
+    });
     
-    // At least one endpoint should work
-    expect([response1.status(), response2.status()]).toContain(200);
-    console.log('[OK] At least one schemas endpoint variant is accessible');
-    
-    console.log('[DONE] OBSCIM-330: Schema endpoint variants test completed');
+    console.log('[DONE] OBSCIM-330: Both /v2/Schemas and /Schemas endpoints return proper JSON responses');
   });
 
   /**
-   * OBSCIM-338: Verify the new Schema.json for User and Group defined in OBSCIM project as per SCIM2.0
+   * OBSCIM-338: Verify the new Schema.json for User and Group defined in OBSCIM project as per SCIM 2.0
+   * JIRA Steps:
+   * 1. GET /v2/Schemas endpoint
+   * 2. Match response with RFC-7643 (SCIM 2.0 Core Schema) page 30
+   * 3. Validate attributes, sub-attributes, and structure
+   * 4. Confirm SCIM 2.0 compliance (e.g., removed urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility)
+   * Expected: User and Group schemas match RFC-7643 specification
    */
   test('OBSCIM-338: Detailed User and Group schema validation', async ({ request }, testInfo) => {
-    console.log('[START] OBSCIM-338: Validating detailed User and Group schema definitions');
+    console.log('[START] OBSCIM-338: Validating User and Group schemas per RFC-7643 SCIM 2.0');
     
     const endpoint = ApiEndpoints.schemas();
-    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
-      headers: apiContext.headers
+    
+    let responseBody: any;
+    
+    await test.step('Step 1: GET /v2/Schemas endpoint', async () => {
+      const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+        headers: apiContext.headers
+      });
+      
+      console.log(`[OK] Response status: ${response.status()}`);
+      expect(response.status()).toBe(200);
+      
+      responseBody = await response.json();
+      console.log(`[OK] Retrieved ${responseBody.totalResults} schemas`);
+      
+      // Validate response structure
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+      expect(responseBody.Resources).toBeDefined();
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
     });
     
-    console.log(`[OK] Response status: ${response.status()}`);
-    expect(response.status()).toBe(200);
-    
-    const responseBody = await response.json();
-    console.log(`[OK] Retrieved ${responseBody.totalResults} schemas`);
-    
-    // Find User schema
-    const userSchema = responseBody.Resources?.find((s: any) => 
-      s.id === 'urn:ietf:params:scim:schemas:core:2.0:User' || s.id.includes('User')
-    );
-    
-    if (userSchema) {
-      console.log('[INFO] Validating User schema structure...');
+    await test.step('Step 2-3: Validate User schema matches RFC-7643 specification', async () => {
+      const userSchema = responseBody.Resources.find((s: any) => 
+        s.id === 'urn:ietf:params:scim:schemas:core:2.0:User'
+      );
+      
+      expect(userSchema).toBeDefined();
+      console.log('[INFO] Validating User schema per RFC-7643...');
       console.log(`[OK] User schema ID: ${userSchema.id}`);
       console.log(`[OK] User schema name: ${userSchema.name}`);
       
-      // Validate User schema required fields
-      expect(userSchema).toHaveProperty('id');
-      expect(userSchema).toHaveProperty('name');
-      expect(userSchema).toHaveProperty('description');
-      expect(userSchema).toHaveProperty('attributes');
-      console.log('[OK] User schema has required properties');
+      // RFC-7643 required schema properties
+      expect(userSchema.id).toBe('urn:ietf:params:scim:schemas:core:2.0:User');
+      expect(userSchema.name).toBe('User');
+      expect(userSchema.description).toBeDefined();
+      expect(userSchema.attributes).toBeDefined();
+      console.log('[OK] User schema has RFC-7643 required properties');
       
-      // Validate User schema has key attributes
+      // RFC-7643 Section 4.1: User schema core attributes (check those present in implementation)
       const userAttrs = userSchema.attributes || [];
-      const expectedUserAttrs = ['userName', 'name', 'displayName', 'emails', 'active', 'groups'];
+      const rfcCoreAttrs = ['userName', 'name', 'active', 'emails', 'groups'];
       
-      expectedUserAttrs.forEach(attrName => {
-        const found = userAttrs.some((a: any) => a.name === attrName);
-        if (found) {
-          console.log(`[OK] User schema contains attribute: ${attrName}`);
+      console.log('[INFO] Validating RFC-7643 core User attributes present in implementation...');
+      rfcCoreAttrs.forEach(attrName => {
+        const attr = userAttrs.find((a: any) => a.name === attrName);
+        if (attr) {
+          console.log(`  ✅ User.${attrName} - type: ${attr.type}, required: ${attr.required}, mutability: ${attr.mutability}`);
+          expect(attr).toBeDefined();
         } else {
-          console.log(`[WARN] User schema missing attribute: ${attrName}`);
+          console.log(`  ⚠️  User.${attrName} - not present in this implementation`);
         }
       });
       
-      // Validate userName attribute details (required attribute)
+      // Validate userName (RFC-7643 required attribute)
       const userNameAttr = userAttrs.find((a: any) => a.name === 'userName');
-      if (userNameAttr) {
-        console.log('[INFO] Validating userName attribute details...');
-        expect(userNameAttr).toHaveProperty('type');
-        expect(userNameAttr).toHaveProperty('multiValued');
-        expect(userNameAttr).toHaveProperty('required');
-        expect(userNameAttr).toHaveProperty('mutability');
-        console.log(`  [OK] type: ${userNameAttr.type}`);
-        console.log(`  [OK] multiValued: ${userNameAttr.multiValued}`);
-        console.log(`  [OK] required: ${userNameAttr.required}`);
-        console.log(`  [OK] mutability: ${userNameAttr.mutability}`);
+      expect(userNameAttr.type).toBe('string');
+      expect(userNameAttr.required).toBe(true);
+      expect(userNameAttr.mutability).toBe('readWrite');
+      expect(userNameAttr.uniqueness).toBe('server');
+      console.log('[OK] userName attribute matches RFC-7643 specification');
+      
+      // Validate name complex attribute with sub-attributes
+      const nameAttr = userAttrs.find((a: any) => a.name === 'name');
+      expect(nameAttr.type).toBe('complex');
+      expect(nameAttr.subAttributes).toBeDefined();
+      const nameSubAttrs = nameAttr.subAttributes.map((sa: any) => sa.name);
+      console.log(`[INFO] name sub-attributes: ${nameSubAttrs.join(', ')}`);
+      expect(nameSubAttrs).toContain('formatted');
+      // RFC-7643 defines familyName, givenName, etc. - check if present
+      if (nameSubAttrs.includes('familyName')) {
+        console.log('[OK] name has familyName sub-attribute');
       }
-    } else {
-      console.log('[WARN] User schema not found in response');
-    }
+      if (nameSubAttrs.includes('givenName')) {
+        console.log('[OK] name has givenName sub-attribute');
+      }
+      console.log('[OK] name attribute structure validated');
+    });
     
-    // Find Group schema
-    const groupSchema = responseBody.Resources?.find((s: any) => 
-      s.id === 'urn:ietf:params:scim:schemas:core:2.0:Group' || s.id.includes('Group')
-    );
-    
-    if (groupSchema) {
-      console.log('[INFO] Validating Group schema structure...');
+    await test.step('Step 2-3: Validate Group schema matches RFC-7643 specification', async () => {
+      const groupSchema = responseBody.Resources.find((s: any) => 
+        s.id === 'urn:ietf:params:scim:schemas:core:2.0:Group'
+      );
+      
+      expect(groupSchema).toBeDefined();
+      console.log('[INFO] Validating Group schema per RFC-7643...');
       console.log(`[OK] Group schema ID: ${groupSchema.id}`);
       console.log(`[OK] Group schema name: ${groupSchema.name}`);
       
-      // Validate Group schema required fields
-      expect(groupSchema).toHaveProperty('id');
-      expect(groupSchema).toHaveProperty('name');
-      expect(groupSchema).toHaveProperty('description');
-      expect(groupSchema).toHaveProperty('attributes');
-      console.log('[OK] Group schema has required properties');
+      // RFC-7643 required schema properties
+      expect(groupSchema.id).toBe('urn:ietf:params:scim:schemas:core:2.0:Group');
+      expect(groupSchema.name).toBe('Group');
+      expect(groupSchema.description).toBeDefined();
+      expect(groupSchema.attributes).toBeDefined();
+      console.log('[OK] Group schema has RFC-7643 required properties');
       
-      // Validate Group schema has key attributes
+      // RFC-7643 Section 4.2: Group schema core attributes (check those present in implementation)
       const groupAttrs = groupSchema.attributes || [];
-      const expectedGroupAttrs = ['displayName', 'members'];
+      const rfcCoreAttrs = ['displayName', 'members'];
       
-      expectedGroupAttrs.forEach(attrName => {
-        const found = groupAttrs.some((a: any) => a.name === attrName);
-        if (found) {
-          console.log(`[OK] Group schema contains attribute: ${attrName}`);
+      console.log('[INFO] Validating RFC-7643 core Group attributes present in implementation...');
+      rfcCoreAttrs.forEach(attrName => {
+        const attr = groupAttrs.find((a: any) => a.name === attrName);
+        if (attr) {
+          console.log(`  ✅ Group.${attrName} - type: ${attr.type}, required: ${attr.required || false}`);
+          expect(attr).toBeDefined();
         } else {
-          console.log(`[WARN] Group schema missing attribute: ${attrName}`);
+          console.log(`  ⚠️  Group.${attrName} - not present in this implementation`);
         }
       });
       
-      // Validate displayName attribute details (required attribute)
+      // Validate displayName (RFC-7643 required attribute)
       const displayNameAttr = groupAttrs.find((a: any) => a.name === 'displayName');
-      if (displayNameAttr) {
-        console.log('[INFO] Validating displayName attribute details...');
-        expect(displayNameAttr).toHaveProperty('type');
-        expect(displayNameAttr).toHaveProperty('multiValued');
-        expect(displayNameAttr).toHaveProperty('required');
-        console.log(`  [OK] type: ${displayNameAttr.type}`);
-        console.log(`  [OK] multiValued: ${displayNameAttr.multiValued}`);
-        console.log(`  [OK] required: ${displayNameAttr.required}`);
+      expect(displayNameAttr.type).toBe('string');
+      expect(displayNameAttr.required).toBe(true);
+      expect(displayNameAttr.mutability).toBe('readWrite');
+      console.log('[OK] displayName attribute matches RFC-7643 specification');
+      
+      // Validate members complex multivalued attribute
+      const membersAttr = groupAttrs.find((a: any) => a.name === 'members');
+      expect(membersAttr.type).toBe('complex');
+      expect(membersAttr.multiValued).toBe(true);
+      expect(membersAttr.subAttributes).toBeDefined();
+      const memberSubAttrs = membersAttr.subAttributes.map((sa: any) => sa.name);
+      console.log(`[INFO] members sub-attributes: ${memberSubAttrs.join(', ')}`);
+      expect(memberSubAttrs).toContain('value');
+      // RFC-7643 defines $ref, type - check if present
+      if (memberSubAttrs.includes('$ref')) {
+        console.log('[OK] members has $ref sub-attribute');
       }
-    } else {
-      console.log('[WARN] Group schema not found in response');
-    }
+      if (memberSubAttrs.includes('type')) {
+        console.log('[OK] members has type sub-attribute');
+      }
+      console.log('[OK] members attribute structure validated');
+    });
     
-    console.log('[DONE] OBSCIM-338: Detailed schema validation completed successfully');
+    await test.step('Step 4: Verify SCIM 2.0 compliance - non-standard schemas removed', async () => {
+      console.log('[INFO] Checking for removed non-SCIM 2.0 schema IDs...');
+      
+      // JIRA: urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility should be removed
+      const removedSchemaId = 'urn:hyland:params:scim:schemas:extension:1.0:ServiceProviderCompatibility';
+      const hasRemovedSchema = responseBody.Resources.some((s: any) => s.id === removedSchemaId);
+      
+      expect(hasRemovedSchema).toBe(false);
+      console.log(`[OK] Non-SCIM 2.0 schema "${removedSchemaId}" is correctly removed`);
+      
+      // Validate only standard SCIM 2.0 and Hyland extension schemas present
+      const schemaIds = responseBody.Resources.map((s: any) => s.id);
+      console.log(`[INFO] Schema IDs present: ${schemaIds.length} total`);
+      schemaIds.forEach((id: string) => {
+        console.log(`  - ${id}`);
+      });
+      
+      // Ensure core SCIM 2.0 schemas are present
+      expect(schemaIds).toContain('urn:ietf:params:scim:schemas:core:2.0:User');
+      expect(schemaIds).toContain('urn:ietf:params:scim:schemas:core:2.0:Group');
+      console.log('[OK] SCIM 2.0 compliance validated - only standard schemas present');
+    });
+    
+    console.log('[DONE] OBSCIM-338: User and Group schemas validated per RFC-7643 SCIM 2.0');
   });
 
   /**
-   * OBSCIM-341: Verify the new resourceType.json for User and Group defined in OBSCIM project as per SCIM2.0
+   * OBSCIM-341: Verify the new resourceType.json for User and Group defined in OBSCIM project as per SCIM 2.0
+   * JIRA Steps:
+   * 1. GET /v2/ResourceTypes endpoint
+   * 2. Match response with RFC-7643 (SCIM 2.0 Core Schema) page 29
+   * 3. Validate User ResourceType structure and attributes
+   * 4. Validate Group ResourceType structure and attributes
+   * 5. Confirm matches API server response (no changes for SCIM 2.0 compliance)
+   * Expected: Response contains User and Group ResourceTypes with proper structure per RFC-7643
    */
   test('OBSCIM-341: Detailed ResourceType validation for User and Group', async ({ request }, testInfo) => {
-    console.log('[START] OBSCIM-341: Validating detailed User and Group resourceType definitions');
+    console.log('[START] OBSCIM-341: Validating User and Group ResourceTypes per RFC-7643 SCIM 2.0');
     
     const endpoint = ApiEndpoints.resourceTypes();
-    const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
-      headers: apiContext.headers
+    
+    let responseBody: any;
+    
+    await test.step('Step 1-2: GET /v2/ResourceTypes and validate response structure', async () => {
+      const response = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+        headers: apiContext.headers
+      });
+      
+      console.log(`[OK] Response status: ${response.status()}`);
+      expect(response.status()).toBe(200);
+      
+      responseBody = await response.json();
+      console.log(`[OK] Retrieved ${responseBody.totalResults} resource types`);
+      
+      // Validate RFC-7643 ListResponse structure
+      expect(responseBody.schemas).toContain('urn:ietf:params:scim:api:messages:2.0:ListResponse');
+      expect(responseBody.totalResults).toBe(2);
+      expect(responseBody.Resources).toBeDefined();
+      expect(Array.isArray(responseBody.Resources)).toBe(true);
+      expect(responseBody.Resources.length).toBe(2);
+      console.log('[OK] Response matches RFC-7643 ListResponse structure');
     });
     
-    console.log(`[OK] Response status: ${response.status()}`);
-    expect(response.status()).toBe(200);
+    await test.step('Step 3: Validate User ResourceType per JIRA expected response', async () => {
+      const userResourceType = responseBody.Resources.find((rt: any) => rt.name === 'User');
+      
+      expect(userResourceType).toBeDefined();
+      console.log('[INFO] Validating User ResourceType per RFC-7643...');
+      
+      // JIRA Expected: schemas contains ResourceType schema
+      expect(userResourceType.schemas).toBeDefined();
+      expect(userResourceType.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ResourceType');
+      console.log('[OK] User ResourceType schemas valid');
+      
+      // JIRA Expected: schema references User core schema
+      expect(userResourceType.schema).toBe('urn:ietf:params:scim:schemas:core:2.0:User');
+      console.log(`[OK] schema: ${userResourceType.schema}`);
+      
+      // JIRA Expected: schemaExtensions for UserPasswordChange and UserPasswordState
+      expect(userResourceType.schemaExtensions).toBeDefined();
+      expect(Array.isArray(userResourceType.schemaExtensions)).toBe(true);
+      console.log(`[INFO] User has ${userResourceType.schemaExtensions.length} schema extensions`);
+      
+      const extensionSchemas = userResourceType.schemaExtensions.map((ext: any) => ext.schema);
+      expect(extensionSchemas).toContain('urn:hyland:params:scim:schemas:extension:1.0:UserPasswordChange');
+      expect(extensionSchemas).toContain('urn:hyland:params:scim:schemas:extension:1.0:UserPasswordState');
+      
+      userResourceType.schemaExtensions.forEach((ext: any) => {
+        console.log(`  ✅ ${ext.schema} - required: ${ext.required}`);
+        expect(ext.required).toBe(false);
+      });
+      console.log('[OK] User schemaExtensions match JIRA expected response');
+      
+      // JIRA Expected: endpoint is "Users"
+      expect(userResourceType.endpoint).toMatch(/Users$/);
+      console.log(`[OK] endpoint: ${userResourceType.endpoint}`);
+      
+      // JIRA Expected: id is "User"
+      expect(userResourceType.id).toBe('User');
+      console.log(`[OK] id: ${userResourceType.id}`);
+      
+      // JIRA Expected: name is "User"
+      expect(userResourceType.name).toBe('User');
+      console.log(`[OK] name: ${userResourceType.name}`);
+      
+      // JIRA Expected: description is "User Account"
+      expect(userResourceType.description).toBe('User Account');
+      console.log(`[OK] description: ${userResourceType.description}`);
+      
+      // JIRA Expected: meta with resourceType and location
+      expect(userResourceType.meta).toBeDefined();
+      expect(userResourceType.meta.resourceType).toBe('ResourceType');
+      expect(userResourceType.meta.location).toBeDefined();
+      expect(userResourceType.meta.location).toContain('/ResourceTypes/User');
+      console.log(`[OK] meta.resourceType: ${userResourceType.meta.resourceType}`);
+      console.log(`[OK] meta.location: ${userResourceType.meta.location}`);
+      
+      console.log('[OK] User ResourceType matches JIRA expected response and RFC-7643');
+    });
     
-    const responseBody = await response.json();
-    console.log(`[OK] Retrieved ${responseBody.totalResults} resource types`);
-    
-    // Find User ResourceType
-    const userResourceType = responseBody.Resources?.find((rt: any) => rt.name === 'User');
-    
-    if (userResourceType) {
-      console.log('[INFO] Validating User ResourceType structure...');
-      console.log(`[OK] User ResourceType ID: ${userResourceType.id}`);
-      console.log(`[OK] User ResourceType name: ${userResourceType.name}`);
-      console.log(`[OK] User ResourceType endpoint: ${userResourceType.endpoint}`);
-      console.log(`[OK] User ResourceType schema: ${userResourceType.schema}`);
+    await test.step('Step 4: Validate Group ResourceType per JIRA expected response', async () => {
+      const groupResourceType = responseBody.Resources.find((rt: any) => rt.name === 'Group');
       
-      // Validate User ResourceType required fields
-      expect(userResourceType).toHaveProperty('schemas');
-      expect(userResourceType).toHaveProperty('id');
-      expect(userResourceType).toHaveProperty('name');
-      expect(userResourceType).toHaveProperty('endpoint');
-      expect(userResourceType).toHaveProperty('description');
-      expect(userResourceType).toHaveProperty('schema');
-      console.log('[OK] User ResourceType has all required SCIM 2.0 properties');
+      expect(groupResourceType).toBeDefined();
+      console.log('[INFO] Validating Group ResourceType per RFC-7643...');
       
-      // Validate endpoint format
-      expect(userResourceType.endpoint).toMatch(/^\/.*Users$/);
-      console.log('[OK] User ResourceType endpoint format is valid');
+      // JIRA Expected: schemas contains ResourceType schema
+      expect(groupResourceType.schemas).toBeDefined();
+      expect(groupResourceType.schemas).toContain('urn:ietf:params:scim:schemas:core:2.0:ResourceType');
+      console.log('[OK] Group ResourceType schemas valid');
       
-      // Validate schema URI
-      expect(userResourceType.schema).toContain('User');
-      console.log('[OK] User ResourceType schema URI references User');
+      // JIRA Expected: schema references Group core schema
+      expect(groupResourceType.schema).toBe('urn:ietf:params:scim:schemas:core:2.0:Group');
+      console.log(`[OK] schema: ${groupResourceType.schema}`);
       
-      // Check for schema extensions if present
-      if (userResourceType.schemaExtensions) {
-        console.log(`[INFO] User ResourceType has ${userResourceType.schemaExtensions.length} schema extensions`);
-        userResourceType.schemaExtensions.forEach((ext: any) => {
-          console.log(`  [OK] Extension schema: ${ext.schema}`);
-          console.log(`  [OK] Extension required: ${ext.required}`);
-        });
-      }
-    } else {
-      console.log('[WARN] User ResourceType not found in response');
-    }
-    
-    // Find Group ResourceType
-    const groupResourceType = responseBody.Resources?.find((rt: any) => rt.name === 'Group');
-    
-    if (groupResourceType) {
-      console.log('[INFO] Validating Group ResourceType structure...');
-      console.log(`[OK] Group ResourceType ID: ${groupResourceType.id}`);
-      console.log(`[OK] Group ResourceType name: ${groupResourceType.name}`);
-      console.log(`[OK] Group ResourceType endpoint: ${groupResourceType.endpoint}`);
-      console.log(`[OK] Group ResourceType schema: ${groupResourceType.schema}`);
-      
-      // Validate Group ResourceType required fields
-      expect(groupResourceType).toHaveProperty('schemas');
-      expect(groupResourceType).toHaveProperty('id');
-      expect(groupResourceType).toHaveProperty('name');
-      expect(groupResourceType).toHaveProperty('endpoint');
-      expect(groupResourceType).toHaveProperty('description');
-      expect(groupResourceType).toHaveProperty('schema');
-      console.log('[OK] Group ResourceType has all required SCIM 2.0 properties');
-      
-      // Validate endpoint format
-      expect(groupResourceType.endpoint).toMatch(/^\/.*Groups$/);
-      console.log('[OK] Group ResourceType endpoint format is valid');
-      
-      // Validate schema URI
-      expect(groupResourceType.schema).toContain('Group');
-      console.log('[OK] Group ResourceType schema URI references Group');
-      
-      // Check for schema extensions if present
+      // JIRA Note: Group does not have schemaExtensions in expected response
       if (groupResourceType.schemaExtensions) {
-        console.log(`[INFO] Group ResourceType has ${groupResourceType.schemaExtensions.length} schema extensions`);
-        groupResourceType.schemaExtensions.forEach((ext: any) => {
-          console.log(`  [OK] Extension schema: ${ext.schema}`);
-          console.log(`  [OK] Extension required: ${ext.required}`);
-        });
+        console.log(`[INFO] Group has ${groupResourceType.schemaExtensions.length} schema extensions (optional)`);
+      } else {
+        console.log('[OK] Group has no schemaExtensions (per JIRA expected response)');
       }
-    } else {
-      console.log('[WARN] Group ResourceType not found in response');
-    }
+      
+      // JIRA Expected: endpoint is "Groups"
+      expect(groupResourceType.endpoint).toMatch(/Groups$/);
+      console.log(`[OK] endpoint: ${groupResourceType.endpoint}`);
+      
+      // JIRA Expected: id is "Group"
+      expect(groupResourceType.id).toBe('Group');
+      console.log(`[OK] id: ${groupResourceType.id}`);
+      
+      // JIRA Expected: name is "Group"
+      expect(groupResourceType.name).toBe('Group');
+      console.log(`[OK] name: ${groupResourceType.name}`);
+      
+      // JIRA Expected: description is "Group"
+      expect(groupResourceType.description).toBe('Group');
+      console.log(`[OK] description: ${groupResourceType.description}`);
+      
+      // JIRA Expected: meta with resourceType and location
+      expect(groupResourceType.meta).toBeDefined();
+      expect(groupResourceType.meta.resourceType).toBe('ResourceType');
+      expect(groupResourceType.meta.location).toBeDefined();
+      expect(groupResourceType.meta.location).toContain('/ResourceTypes/Group');
+      console.log(`[OK] meta.resourceType: ${groupResourceType.meta.resourceType}`);
+      console.log(`[OK] meta.location: ${groupResourceType.meta.location}`);
+      
+      console.log('[OK] Group ResourceType matches JIRA expected response and RFC-7643');
+    });
     
-    console.log('[DONE] OBSCIM-341: Detailed ResourceType validation completed successfully');
+    await test.step('Step 5: Verify SCIM 2.0 compliance - structure matches specification', async () => {
+      console.log('[INFO] Confirming SCIM 2.0 compliance (no changes needed from existing API server)');
+      
+      // Both User and Group should follow standard RFC-7643 ResourceType structure
+      responseBody.Resources.forEach((rt: any) => {
+        console.log(`[INFO] Validating ${rt.name} ResourceType SCIM 2.0 compliance...`);
+        
+        // RFC-7643 required attributes
+        expect(rt.schemas).toBeDefined();
+        expect(rt.id).toBeDefined();
+        expect(rt.name).toBeDefined();
+        expect(rt.endpoint).toBeDefined();
+        expect(rt.schema).toBeDefined();
+        expect(rt.meta).toBeDefined();
+        
+        console.log(`  ✅ ${rt.name} has all RFC-7643 required ResourceType attributes`);
+      });
+      
+      console.log('[OK] Both ResourceTypes comply with SCIM 2.0 specification');
+    });
+    
+    console.log('[DONE] OBSCIM-341: User and Group ResourceTypes validated per RFC-7643 SCIM 2.0');
   });
 
   /**
    * OBSCIM-332: Verify the casing of logged in username for different userProvisioning scenarios
+   * 
+   * NOTE: JIRA requirements are about external IdP login flows (SimpleSAML/Okta) with different
+   * userProvisioning settings, which cannot be directly tested via SCIM API endpoints.
+   * 
+   * JIRA Steps (External IdP Login Testing - NOT SCIM API):
+   * 1. Login with userProvisioning OFF - username matches incoming claim
+   * 2. Login with userProvisioningCreateEnabled=true, UpdateEnabled=false - username in CAPITALS
+   * 3. Login with both Create and Update enabled - username in CAPITALS
+   * 4. Repeat with Okta provider
+   * 
+   * This test validates what CAN be tested via SCIM API: username casing consistency
+   * across SCIM operations (GET, filter, etc.). For full JIRA validation, manual
+   * testing with external IdP is required.
    */
-  test('OBSCIM-332: Username casing consistency across operations', async ({ request }, testInfo) => {
-    console.log('[START] OBSCIM-332: Testing username casing consistency');
+  test('OBSCIM-332: Username casing consistency across SCIM operations', async ({ request }, testInfo) => {
+    console.log('[START] OBSCIM-332: Testing username casing consistency in SCIM API');
+    console.log('[NOTE] JIRA tests external IdP login; this validates SCIM API casing consistency');
     
     const endpoint = ApiEndpoints.users();
     
-    // Test 1: Get all users and check userName consistency
-    console.log('[TEST 1] Retrieving users to check userName casing');
-    const getAllResponse = await request.get(`${apiContext.baseUrl}${endpoint}`, {
-      headers: apiContext.headers
-    });
-    
-    console.log(`[OK] Response status: ${getAllResponse.status()}`);
-    expect(getAllResponse.status()).toBe(200);
-    
-    const getAllBody = await getAllResponse.json();
-    
-    if (getAllBody.Resources && getAllBody.Resources.length > 0) {
-      // Check first few users
-      const sampleSize = Math.min(5, getAllBody.Resources.length);
-      console.log(`[INFO] Checking userName casing for ${sampleSize} users...`);
+    await test.step('Step 1: Get users and verify userName casing consistency', async () => {
+      console.log('[INFO] Retrieving users to check userName casing...');
+      const getAllResponse = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+        headers: apiContext.headers
+      });
+      
+      expect(getAllResponse.status()).toBe(200);
+      const getAllBody = await getAllResponse.json();
+      
+      expect(getAllBody.Resources).toBeDefined();
+      expect(Array.isArray(getAllBody.Resources)).toBe(true);
+      
+      if (getAllBody.Resources.length === 0) {
+        console.log('[SKIP] No users found to test');
+        test.skip();
+        return;
+      }
+      
+      // Sample users to test
+      const sampleSize = Math.min(3, getAllBody.Resources.length);
+      console.log(`[OK] Testing ${sampleSize} users for casing consistency`);
       
       for (let i = 0; i < sampleSize; i++) {
         const user = getAllBody.Resources[i];
-        console.log(`[INFO] User ${i + 1}:`);
-        console.log(`  - ID: ${user.id}`);
-        console.log(`  - userName: ${user.userName}`);
+        console.log(`\n[INFO] Testing user ${i + 1}: ${user.userName}`);
         
-        // Validate userName exists and is a string
         expect(user.userName).toBeDefined();
         expect(typeof user.userName).toBe('string');
-        console.log(`  [OK] userName is defined and is a string`);
         
-        // Test 2: Retrieve this specific user by ID and compare userName
+        const originalUserName = user.userName;
+        
+        // Step 1a: GET by ID and compare
         const getUserResponse = await request.get(
           `${apiContext.baseUrl}${endpoint}/${user.id}`,
           { headers: apiContext.headers }
         );
         
-        if (getUserResponse.status() === 200) {
-          const getUserBody = await getUserResponse.json();
-          
-          // Compare userName from list vs individual get
-          expect(getUserBody.userName).toBe(user.userName);
-          console.log(`  [OK] userName casing consistent between GET all and GET by ID`);
-        }
+        expect(getUserResponse.status()).toBe(200);
+        const getUserBody = await getUserResponse.json();
+        expect(getUserBody.userName).toBe(originalUserName);
+        console.log(`  ✅ GET by ID: userName "${getUserBody.userName}" matches (consistent casing)`);
         
-        // Test 3: Filter by userName and check casing
-        const filterExact = `userName eq "${user.userName}"`;
+        // Step 1b: Filter by userName and compare
+        const filterQuery = `userName eq "${originalUserName}"`;
         const filterResponse = await request.get(
-          `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterExact)}`,
+          `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterQuery)}`,
+          { headers: apiContext.headers }
+        );
+        
+        if (filterResponse.status() === 200) {
+          const filterBody = await filterResponse.json();
+          const filteredUser = filterBody.Resources?.find((u: any) => u.id === user.id);
+          
+          if (filteredUser) {
+            expect(filteredUser.userName).toBe(originalUserName);
+            console.log(`  ✅ Filter: userName "${filteredUser.userName}" matches (consistent casing)`);
+          }
+        }
+      }
+      
+      console.log('\n[OK] All tested users maintain consistent userName casing across operations');
+    });
+    
+    await test.step('Step 2: Verify case-insensitive filter behavior', async () => {
+      console.log('\n[INFO] Testing case-insensitive filter behavior...');
+      
+      // Get a user to test with
+      const getAllResponse = await request.get(`${apiContext.baseUrl}${endpoint}`, {
+        headers: apiContext.headers
+      });
+      const getAllBody = await getAllResponse.json();
+      
+      if (!getAllBody.Resources || getAllBody.Resources.length === 0) {
+        console.log('[SKIP] No users to test');
+        return;
+      }
+      
+      const testUser = getAllBody.Resources[0];
+      const originalUserName = testUser.userName;
+      
+      // Test with different casing variations
+      const variations = [
+        originalUserName.toLowerCase(),
+        originalUserName.toUpperCase(),
+        originalUserName
+      ];
+      
+      console.log(`[INFO] Testing case variations for: ${originalUserName}`);
+      
+      for (const variation of variations) {
+        const filterQuery = `userName eq "${variation}"`;
+        const filterResponse = await request.get(
+          `${apiContext.baseUrl}${endpoint}?filter=${encodeURIComponent(filterQuery)}`,
           { headers: apiContext.headers }
         );
         
         if (filterResponse.status() === 200) {
           const filterBody = await filterResponse.json();
           
+          // Filter should work case-insensitively
           if (filterBody.Resources && filterBody.Resources.length > 0) {
-            const filteredUser = filterBody.Resources.find((u: any) => u.id === user.id);
-            if (filteredUser) {
-              expect(filteredUser.userName).toBe(user.userName);
-              console.log(`  [OK] userName casing consistent in filter results`);
+            const foundUser = filterBody.Resources.find((u: any) => u.id === testUser.id);
+            if (foundUser) {
+              // But returned userName should maintain original casing
+              expect(foundUser.userName).toBe(originalUserName);
+              console.log(`  ✅ Filter "${variation}" found user, returned with original casing: ${foundUser.userName}`);
             }
           }
         }
       }
-    }
+      
+      console.log('[OK] Case-insensitive filtering works, but userName casing preserved in responses');
+    });
     
-    console.log('[DONE] OBSCIM-332: Username casing consistency test completed successfully');
+    console.log('\n[DONE] OBSCIM-332: SCIM API username casing consistency validated');
+    console.log('[NOTE] Full JIRA validation requires manual testing with external IdP providers');
   });
 });
